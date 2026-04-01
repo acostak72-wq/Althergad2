@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AETHELGARD | Global Syndicate v32.0</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #050505; --panel: #0a0a0c; --panel-border: #1a1a1a;
+  --gold: #d4af37; --gold-dim: rgba(212, 175, 55, 0.2);
+  --cyan: #00e5ff; --cyan-dim: rgba(0, 229, 255, 0.15);
+  --white: #f8f8f2; --gray: #888888; --dark-gray: #222222;
+  --red: #ff3333; --green: #00ff66;
+  --serif: 'Playfair Display', serif; --mono: 'JetBrains Mono', monospace; --sans: 'Space Grotesk', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--gray); font-family: var(--sans); overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--gold) var(--bg); }
+
+/* Luxury Background Glow */
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 50% 0%, var(--gold-dim) 0%, transparent 50%),
+              radial-gradient(circle at 100% 100%, var(--cyan-dim) 0%, transparent 50%);
+}
+
+#app { position: relative; z-index: 2; display: flex; flex-direction: column; min-height: 100vh; padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+/* Elite Topbar */
+#topbar { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid var(--gold-dim); margin-bottom: 30px; }
+.brand h1 { font-family: var(--serif); font-size: 2rem; color: var(--white); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+.brand span { color: var(--gold); font-style: italic; }
+.brand p { font-size: 0.65rem; letter-spacing: 4px; color: var(--gray); margin-top: 5px; text-transform: uppercase; }
+
+/* Glassmorphism Panels */
+.card { background: rgba(10, 10, 12, 0.85); border: 1px solid var(--panel-border); border-radius: 4px; padding: 25px; backdrop-filter: blur(10px); transition: border-color 0.4s ease; }
+.card:hover { border-color: var(--gold-dim); }
+
+/* Typography & Data */
+h2 { font-family: var(--serif); color: var(--white); font-size: 1.2rem; margin-bottom: 20px; font-weight: 600; letter-spacing: 1px; }
+.money { font-family: var(--mono); font-size: 2.5rem; color: var(--gold); font-weight: 600; letter-spacing: -1px; text-shadow: 0 0 20px rgba(212,175,55,0.2); }
+.kpi-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gray); margin-bottom: 5px; }
+.kpi-value { font-family: var(--mono); font-size: 1.2rem; color: var(--white); }
+
+/* Buttons & Inputs */
+.btn { font-family: var(--sans); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 12px 24px; border-radius: 2px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; }
+.btn-gold { background: transparent; border-color: var(--gold); color: var(--gold); }
+.btn-gold:hover:not(:disabled) { background: var(--gold); color: #000; box-shadow: 0 0 15px var(--gold-dim); }
+.btn-cyan { background: transparent; border-color: var(--cyan); color: var(--cyan); }
+.btn-cyan:hover:not(:disabled) { background: var(--cyan); color: #000; box-shadow: 0 0 15px var(--cyan-dim); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--gray); color: var(--gray); }
+.inp { background: var(--bg); border: 1px solid var(--panel-border); color: var(--white); font-family: var(--mono); font-size: 0.75rem; padding: 10px 15px; outline: none; transition: 0.3s; width: 100%; }
+.inp:focus { border-color: var(--gold); }
+
+/* Terminal */
+.terminal { height: 300px; overflow-y: auto; background: var(--bg); border: 1px solid var(--panel-border); padding: 15px; font-family: var(--mono); font-size: 0.7rem; line-height: 1.6; }
+.msg-line { margin-bottom: 8px; border-left: 2px solid var(--dark-gray); padding-left: 12px; animation: fadeUp 0.4s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Grid Layouts */
+.grid-main { display: grid; grid-template-columns: 1fr 400px; gap: 30px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+@media (max-width: 1024px) { .grid-main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="brand">
+      <h1>AETHELGARD <span>SYNDICATE</span></h1>
+      <p>G32 Operational Hub · Elite Strategy</p>
+    </div>
+    <div style="display:flex; gap: 15px; align-items: center;">
+      <div style="text-align: right; margin-right: 15px;">
+        <div style="font-size: 0.55rem; color: var(--gray); letter-spacing: 2px;">PLATFORM FEE</div>
+        <div style="color: var(--gold); font-family: var(--mono); font-size: 0.9rem;">5.00%</div>
+      </div>
+      <input type="password" id="sysKey" placeholder="Access Protocol..." class="inp" style="width: 200px;">
+      <button onclick="bootSystem()" id="btnBoot" class="btn btn-cyan">Initialize</button>
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <div style="display:flex; flex-direction: column; gap: 30px;">
+      
+      <div class="card" style="border-top: 2px solid var(--cyan);">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+          <h2>Autonomous Market Engine</h2>
+          <div id="statusTag" style="font-family: var(--mono); font-size: 0.7rem; color: var(--gray);">SYSTEM STANDBY</div>
+        </div>
+        <div class="grid-3">
+          <div>
+            <div class="kpi-label">Execution Speed</div>
+            <select id="autoSpeed" class="inp">
+              <option value="15000">Aggressive (15s)</option>
+              <option value="30000" selected>Standard (30s)</option>
+            </select>
+          </div>
+          <div style="grid-column: span 2; display: flex; align-items: flex-end;">
+            <button id="btnAuto" onclick="toggleAuto()" disabled class="btn btn-gold" style="width: 100%;">Engage G32 Trading</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="color: var(--cyan); font-size: 0.9rem;">Live Clearing House</h2>
+        <div class="terminal" id="terminal">
+          <div style="color: var(--gray);">> Aethelgard Secure Terminal. Waiting for boot sequence...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="color: var(--gold);">Asset Liquidation & Distribution</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 20px; margin-bottom: 20px;">
+          <div><div class="kpi-label" style="color:var(--red);">Federal Tax (5%)</div><div id="pTax" class="kpi-value" style="color:var(--red);">$0.00</div></div>
+          <div><div class="kpi-label">Operations (20%)</div><div id="p2" class="kpi-value">$0.00</div></div>
+          <div><div class="kpi-label">Capital Reserve (20%)</div><div id="p3" class="kpi-value">$0.00</div></div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+          <div><div class="kpi-label">R&D Tech (20%)</div><div id="p4" class="kpi-value">$0.00</div></div>
+          <div><div class="kpi-label" style="color:var(--cyan);">Arctic Impact / NGO (20%)</div><div id="p5" class="kpi-value" style="color:var(--cyan);">$0.00</div></div>
+          <div>
+            <div class="kpi-label" style="color:var(--gold);">CEO Direct (20%)</div>
+            <div id="p1" class="kpi-value" style="color:var(--gold);">$0.00</div>
+            <div id="p1Cop" style="font-size:0.6rem; color:var(--gray); font-family:var(--mono); margin-top:3px;">0 COP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction: column; gap: 30px;">
+      <div class="card" style="text-align: center; border: 1px solid var(--gold-dim); background: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.05), transparent);">
+        <div class="kpi-label" style="margin-bottom: 15px;">Accumulated Platform Fee (5%)</div>
+        <div id="totalComm" class="money">$0.00</div>
+        <div style="font-size: 0.6rem; color: var(--green); margin-top: 10px; letter-spacing: 1px;">AVAILABLE FOR WITHDRAWAL</div>
+        <button onclick="cobrarPayPal()" class="btn btn-gold" style="width: 100%; margin-top: 30px; background: var(--gold); color: #000;">
+          Execute PayPal Transfer
+        </button>
+      </div>
+
+      <div class="card">
+        <h2>Global Operatives</h2>
+        <div id="agentesList" style="height: 350px; overflow-y: auto; padding-right: 10px; scrollbar-width: thin;">
+          <div style="color: var(--gray); font-size: 0.7rem;">Initialize system to load G32 roster...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const G32_AGENTS = [
+  {n:"APOLLO", l:"🇺🇸 USA", t:"EXP", b:0.38}, {n:"SAKURA", l:"🇯🇵 JPN", t:"IMP", b:0.32},
+  {n:"ARES", l:"🇩🇪 GER", t:"EXP", b:0.35}, {n:"SOLARIS", l:"🇦🇺 AUS", t:"IMP", b:0.34},
+  {n:"DRAGON", l:"🇨🇳 CHN", t:"EXP", b:0.31}, {n:"ELEANOR", l:"🇬🇧 UK", t:"IMP", b:0.36},
+  {n:"SHIVA", l:"🇮🇳 IND", t:"EXP", b:0.30}, {n:"LUMIERE", l:"🇫🇷 FRA", t:"IMP", b:0.37},
+  {n:"MAPUCHE", l:"🇨🇱 CHL", t:"EXP", b:0.29}, {n:"AMAZONIA",l:"🇧🇷 BRA", t:"EXP", b:0.28},
+  {n:"FALCON", l:"🇦🇪 UAE", t:"EXP", b:0.40}, {n:"MERLION", l:"🇸🇬 SGP", t:"IMP", b:0.39},
+  {n:"MAPLE", l:"🇨🇦 CAN", t:"EXP", b:0.33}, {n:"TAEGEUK", l:"🇰🇷 KOR", t:"IMP", b:0.35},
+  {n:"AZTECA", l:"🇲🇽 MEX", t:"EXP", b:0.27}, {n:"SPRINGBOK",l:"🇿🇦 ZAF", t:"IMP", b:0.30},
+  {n:"MIDGARD", l:"🇸🇪 SWE", t:"EXP", b:0.31}, {n:"ROMA", l:"🇮🇹 ITA", t:"IMP", b:0.34},
+  {n:"IBERIA", l:"🇪🇸 ESP", t:"EXP", b:0.32}, {n:"TANGO", l:"🇦🇷 ARG", t:"IMP", b:0.28},
+  {n:"SAHARA", l:"🇲🇦 MAR", t:"EXP", b:0.30}, {n:"DANUBE", l:"🇵🇱 POL", t:"IMP", b:0.33},
+  {n:"NILE", l:"🇪🇬 EGY", t:"EXP", b:0.29}, {n:"PHOENIX", l:"🇬🇷 GRE", t:"IMP", b:0.35},
+  {n:"JAKARTA", l:"🇮🇩 IDN", t:"EXP", b:0.28}, {n:"OSLO", l:"🇳🇴 NOR", t:"EXP", b:0.36},
+  {n:"KAZAKH", l:"🇰🇿 KAZ", t:"EXP", b:0.27}, {n:"ANDES", l:"🇵🇪 PER", t:"EXP", b:0.29},
+  {n:"AURORA", l:"🇫🇮 FIN", t:"EXP", b:0.34}, {n:"ZAMBEZI", l:"🇿🇲 ZMB", t:"IMP", b:0.31},
+  {n:"MEKONG", l:"🇻🇳 VNM", t:"EXP", b:0.28}, {n:"ALPINE", l:"🇨🇭 CHE", t:"IMP", b:0.38}
+];
+
+const S = {
+  booted: false, auto: false, interval: null,
+  commRate: 0.05, taxRate: 0.05,
+  commTotal: 0, taxTotal: 0, p1: 0, p2: 0, p3: 0, p4: 0, p5: 0,
+  COP_RATE: 4100
+};
+
+function logMsg(agent, text, color){
+  const term = document.getElementById('terminal');
+  const d = new Date().toLocaleTimeString();
+  term.innerHTML += `<div class="msg-line" style="border-color:${color}">
+    <div style="font-family:var(--mono); font-size:0.6rem; color:var(--gray); margin-bottom:4px">[${d}] <span style="color:${color}">${agent}</span></div>
+    <div style="color:var(--white); font-size:0.75rem">${text}</div>
+  </div>`;
+  term.scrollTop = term.scrollHeight;
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function bootSystem(){
+  document.getElementById('btnBoot').disabled = true;
+  document.getElementById('btnBoot').textContent = "SYSTEM SECURE";
+  document.getElementById('btnAuto').disabled = false;
+  
+  const list = document.getElementById('agentesList');
+  list.innerHTML = "";
+  G32_AGENTS.forEach(a => {
+    list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border); padding:8px 0; font-family:var(--mono); font-size:0.65rem;">
+      <span style="color:var(--white)">${a.l} ${a.n}</span><span style="color:${a.t==='EXP'?'var(--gold)':'var(--cyan)'}; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:2px;">${a.t}</span>
+    </div>`;
+  });
+  
+  S.booted = true;
+  logMsg("SYSTEM", "Aethelgard Elite Infrastructure Online. G32 Agents ready for deployment.", "var(--cyan)");
+}
+
+function toggleAuto(){
+  if(!S.booted) return;
+  S.auto = !S.auto;
+  const btn = document.getElementById('btnAuto');
+  const tag = document.getElementById('statusTag');
+  const speed = parseInt(document.getElementById('autoSpeed').value);
+  
+  if(S.auto){
+    btn.textContent = "Halt Trading Protocol";
+    btn.style.borderColor = "var(--red)"; btn.style.color = "var(--red)";
+    tag.textContent = "MARKET LIVE"; tag.style.color = "var(--green)";
+    ejecutarTrade();
+    S.interval = setInterval(ejecutarTrade, speed);
+  } else {
+    btn.textContent = "Engage G32 Trading";
+    btn.style.borderColor = "var(--gold)"; btn.style.color = "var(--gold)";
+    tag.textContent = "SYSTEM STANDBY"; tag.style.color = "var(--gray)";
+    clearInterval(S.interval);
+  }
+}
+
+async function ejecutarTrade(){
+  const exps = G32_AGENTS.filter(a=>a.t==="EXP");
+  const imps = G32_AGENTS.filter(a=>a.t==="IMP");
+  
+  const exp1 = exps[Math.floor(Math.random()*exps.length)];
+  const imp = imps[Math.floor(Math.random()*imps.length)];
+  const vol = Math.floor(Math.random() * 15000) + 5000;
+  
+  logMsg("ROUTER", `Demand detected: ${vol.toLocaleString()} MWh by ${imp.l} ${imp.n}.`, "var(--gray)");
+  await sleep(1500);
+  
+  const pBase = exp1.b + (Math.random()*0.02);
+  logMsg(exp1.n, `Terrestrial bid submitted: $${(pBase*1000).toFixed(2)} USD/MWh.`, "var(--white)");
+  await sleep(1500);
+  
+  const pAether = pBase * 0.96; 
+  logMsg("AETHER (ORBITAL)", `Bypassing terrestrial grid. Space-solar bid: $${(pAether*1000).toFixed(2)} USD/MWh.`, "var(--cyan)");
+  await sleep(1500);
+  
+  logMsg(imp.n, `Proposal accepted. Executing smart contract at $${(pAether*1000).toFixed(2)}.`, "var(--gold)");
+  
+  // ELITE MATH LOGIC
+  const brutoUSD = (pAether * 1000) * vol;
+  const comision = brutoUSD * S.commRate;
+  const remanente = brutoUSD - comision;
+  const tax = remanente * S.taxRate;
+  const neto = remanente - tax;
+  const pilar = neto / 5;
+  
+  S.commTotal += comision;
+  S.taxTotal += tax;
+  S.p1 += pilar; S.p2 += pilar; S.p3 += pilar; S.p4 += pilar; S.p5 += pilar;
+  
+  logMsg("CLEARING", `Contract sealed. Gross: $${brutoUSD.toLocaleString('en-US',{maximumFractionDigits:0})}. Fee extracted: $${comision.toLocaleString('en-US',{maximumFractionDigits:0})}.`, "var(--green)");
+  
+  actualizarUI();
+}
+
+function actualizarUI(){
+  const f = v => `$${v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+  document.getElementById('totalComm').textContent = f(S.commTotal);
+  document.getElementById('p1').textContent = f(S.p1);
+  document.getElementById('p1Cop').textContent = `${new Intl.NumberFormat('es-CO', {maximumFractionDigits:0}).format(S.p1 * S.COP_RATE)} COP`;
+  document.getElementById('p2').textContent = f(S.p2);
+  document.getElementById('p3').textContent = f(S.p3);
+  document.getElementById('p4').textContent = f(S.p4);
+  document.getElementById('p5').textContent = f(S.p5);
+  document.getElementById('pTax').textContent = f(S.taxTotal);
+}
+
+function cobrarPayPal(){
+  if(S.commTotal <= 0){ alert("Awaiting operational fee generation."); return; }
+  const amount = S.commTotal.toFixed(2);
+  const desc = encodeURIComponent(`Aethelgard Syndicate - Infrastructure Access & Analysis`);
+  const url = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=Acostatwin2K@gmail.com&amount=${amount}&currency_code=USD&item_name=${desc}`;
+  window.open(url, '_blank', 'noopener');
+}
+</script>
+</body>
+</html>
