@@ -4,281 +4,1115 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>AETHELGARD | Global Syndicate v32.0</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet"/>
 <style>
+/* ===== MICROSOFT WINDOWS 2000 SYSTEM THEME ===== */
 :root {
-  --bg: #050505; --panel: #0a0a0c; --panel-border: #1a1a1a;
-  --gold: #d4af37; --gold-dim: rgba(212, 175, 55, 0.2);
-  --cyan: #00e5ff; --cyan-dim: rgba(0, 229, 255, 0.15);
-  --white: #f8f8f2; --gray: #888888; --dark-gray: #222222;
-  --red: #ff3333; --green: #00ff66;
-  --serif: 'Playfair Display', serif; --mono: 'JetBrains Mono', monospace; --sans: 'Space Grotesk', sans-serif;
+  --win-bg: #d4d0c8;
+  --win-dark: #808080;
+  --win-darker: #404040;
+  --win-light: #ffffff;
+  --win-face: #d4d0c8;
+  --win-shadow: #808080;
+  --win-hilight: #ffffff;
+  --win-dkshadow: #000000;
+  --win-title-active: #000080;
+  --win-title-text: #ffffff;
+  --win-title-inactive: #808080;
+  --win-desktop: #3a6ea5;
+  --win-text: #000000;
+  --win-btn-face: #d4d0c8;
+  --win-selection: #000080;
+  --win-sel-text: #ffffff;
+  --win-terminal-bg: #000000;
+  --win-terminal-text: #c0c0c0;
+  --win-green: #008000;
+  --win-red: #800000;
+  --win-gold: #808000;
+  --win-cyan: #008080;
 }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--gray); font-family: var(--sans); overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--gold) var(--bg); }
 
-/* Luxury Background Glow */
-body::before {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle at 50% 0%, var(--gold-dim) 0%, transparent 50%),
-              radial-gradient(circle at 100% 100%, var(--cyan-dim) 0%, transparent 50%);
+body {
+  background-color: var(--win-desktop);
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  font-family: 'Tahoma', 'MS Sans Serif', Arial, sans-serif;
+  font-size: 11px;
+  color: var(--win-text);
+  min-height: 100vh;
+  padding: 8px;
 }
 
-#app { position: relative; z-index: 2; display: flex; flex-direction: column; min-height: 100vh; padding: 20px; max-width: 1400px; margin: 0 auto; }
+/* ===== WINDOW CHROME ===== */
+.win-window {
+  background: var(--win-face);
+  border-top: 2px solid var(--win-hilight);
+  border-left: 2px solid var(--win-hilight);
+  border-right: 2px solid var(--win-dkshadow);
+  border-bottom: 2px solid var(--win-dkshadow);
+  box-shadow: 1px 1px 0 var(--win-shadow), inset 1px 1px 0 var(--win-light);
+  margin-bottom: 8px;
+}
 
-/* Elite Topbar */
-#topbar { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 20px; border-bottom: 1px solid var(--gold-dim); margin-bottom: 30px; }
-.brand h1 { font-family: var(--serif); font-size: 2rem; color: var(--white); font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-.brand span { color: var(--gold); font-style: italic; }
-.brand p { font-size: 0.65rem; letter-spacing: 4px; color: var(--gray); margin-top: 5px; text-transform: uppercase; }
+.win-window.main-window {
+  max-width: 1380px;
+  margin: 0 auto 0 auto;
+}
 
-/* Glassmorphism Panels */
-.card { background: rgba(10, 10, 12, 0.85); border: 1px solid var(--panel-border); border-radius: 4px; padding: 25px; backdrop-filter: blur(10px); transition: border-color 0.4s ease; }
-.card:hover { border-color: var(--gold-dim); }
+.win-titlebar {
+  background: linear-gradient(to right, #000080, #1084d0);
+  color: var(--win-title-text);
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+  user-select: none;
+}
 
-/* Typography & Data */
-h2 { font-family: var(--serif); color: var(--white); font-size: 1.2rem; margin-bottom: 20px; font-weight: 600; letter-spacing: 1px; }
-.money { font-family: var(--mono); font-size: 2.5rem; color: var(--gold); font-weight: 600; letter-spacing: -1px; text-shadow: 0 0 20px rgba(212,175,55,0.2); }
-.kpi-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gray); margin-bottom: 5px; }
-.kpi-value { font-family: var(--mono); font-size: 1.2rem; color: var(--white); }
+.win-titlebar.inactive {
+  background: linear-gradient(to right, #808080, #a0a0a0);
+}
 
-/* Buttons & Inputs */
-.btn { font-family: var(--sans); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 12px 24px; border-radius: 2px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; display: inline-flex; justify-content: center; align-items: center; }
-.btn-gold { background: transparent; border-color: var(--gold); color: var(--gold); }
-.btn-gold:hover:not(:disabled) { background: var(--gold); color: #000; box-shadow: 0 0 15px var(--gold-dim); }
-.btn-cyan { background: transparent; border-color: var(--cyan); color: var(--cyan); }
-.btn-cyan:hover:not(:disabled) { background: var(--cyan); color: #000; box-shadow: 0 0 15px var(--cyan-dim); }
-.btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--gray); color: var(--gray); }
-.inp { background: var(--bg); border: 1px solid var(--panel-border); color: var(--white); font-family: var(--mono); font-size: 0.75rem; padding: 10px 15px; outline: none; transition: 0.3s; width: 100%; }
-.inp:focus { border-color: var(--gold); }
+.win-title-text {
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
-/* Terminal */
-.terminal { height: 300px; overflow-y: auto; background: var(--bg); border: 1px solid var(--panel-border); padding: 15px; font-family: var(--mono); font-size: 0.7rem; line-height: 1.6; }
-.msg-line { margin-bottom: 8px; border-left: 2px solid var(--dark-gray); padding-left: 12px; animation: fadeUp 0.4s ease; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.win-title-icon {
+  width: 16px; height: 16px;
+  display: inline-block;
+  background: #ffff00;
+  border: 1px solid #808000;
+  font-size: 9px;
+  text-align: center;
+  line-height: 14px;
+}
 
-/* Grid Layouts */
-.grid-main { display: grid; grid-template-columns: 1fr 400px; gap: 30px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-@media (max-width: 1024px) { .grid-main { grid-template-columns: 1fr; } }
+.win-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.win-btn-ctrl {
+  width: 16px; height: 14px;
+  background: var(--win-btn-face);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-right: 1px solid var(--win-dkshadow);
+  border-bottom: 1px solid var(--win-dkshadow);
+  font-size: 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Marlett', 'Wingdings', sans-serif;
+  color: #000;
+}
+.win-btn-ctrl:hover { filter: brightness(1.1); }
+.win-btn-ctrl:active {
+  border-top: 1px solid var(--win-dkshadow);
+  border-left: 1px solid var(--win-dkshadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+}
+.win-btn-ctrl.close-btn { background: #d4d0c8; }
+
+/* ===== MENU BAR ===== */
+.win-menubar {
+  background: var(--win-face);
+  border-bottom: 1px solid var(--win-shadow);
+  padding: 2px 4px;
+  display: flex;
+  gap: 2px;
+}
+
+.win-menu-item {
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.win-menu-item:hover {
+  background: var(--win-selection);
+  color: var(--win-sel-text);
+}
+
+/* ===== TOOLBAR ===== */
+.win-toolbar {
+  background: var(--win-face);
+  border-bottom: 1px solid var(--win-shadow);
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.win-toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+}
+
+/* ===== WIN CONTENT ===== */
+.win-content {
+  padding: 6px;
+}
+
+/* ===== GROUPBOX ===== */
+.win-groupbox {
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-hilight), inset -1px -1px 0 var(--win-shadow);
+  padding: 12px 8px 8px 8px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.win-groupbox-title {
+  position: absolute;
+  top: -7px;
+  left: 8px;
+  background: var(--win-face);
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--win-text);
+}
+
+/* ===== INSET / SUNKEN PANEL ===== */
+.win-inset {
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  background: var(--win-light);
+  box-shadow: inset 1px 1px 0 var(--win-dkshadow);
+  padding: 4px;
+}
+
+/* ===== BUTTONS ===== */
+.win-button {
+  background: var(--win-btn-face);
+  border-top: 2px solid var(--win-hilight);
+  border-left: 2px solid var(--win-hilight);
+  border-right: 2px solid var(--win-dkshadow);
+  border-bottom: 2px solid var(--win-dkshadow);
+  box-shadow: inset 1px 1px 0 var(--win-light), inset -1px -1px 0 var(--win-shadow);
+  padding: 4px 16px;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--win-text);
+  min-width: 75px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.win-button:hover { filter: brightness(1.05); }
+
+.win-button:active, .win-button.active {
+  border-top: 2px solid var(--win-dkshadow);
+  border-left: 2px solid var(--win-dkshadow);
+  border-right: 2px solid var(--win-hilight);
+  border-bottom: 2px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-shadow), inset -1px -1px 0 var(--win-light);
+  padding: 5px 15px 3px 17px;
+}
+
+.win-button:disabled {
+  color: var(--win-shadow);
+  cursor: default;
+  pointer-events: none;
+}
+.win-button.btn-default {
+  border-top: 2px solid #000080;
+  border-left: 2px solid #000080;
+  border-right: 2px solid #000080;
+  border-bottom: 2px solid #000080;
+  outline: 1px solid var(--win-hilight);
+}
+
+/* ===== INPUTS ===== */
+.win-input {
+  background: var(--win-light);
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-dkshadow);
+  padding: 2px 4px;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 11px;
+  outline: none;
+  color: var(--win-text);
+}
+.win-input:focus {
+  outline: none;
+}
+
+/* ===== SELECT ===== */
+.win-select {
+  background: var(--win-light);
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-dkshadow);
+  padding: 2px 4px;
+  font-family: 'Tahoma', sans-serif;
+  font-size: 11px;
+  color: var(--win-text);
+  cursor: pointer;
+}
+
+/* ===== TERMINAL / LIST BOX ===== */
+.win-terminal {
+  background: var(--win-terminal-bg);
+  color: var(--win-terminal-text);
+  border-top: 1px solid var(--win-dkshadow);
+  border-left: 1px solid var(--win-dkshadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 #000;
+  padding: 6px 8px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--win-shadow) var(--win-face);
+}
+
+.win-terminal::-webkit-scrollbar { width: 16px; }
+.win-terminal::-webkit-scrollbar-track { background: var(--win-face); }
+.win-terminal::-webkit-scrollbar-thumb {
+  background: var(--win-face);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-right: 1px solid var(--win-dkshadow);
+  border-bottom: 1px solid var(--win-dkshadow);
+}
+
+.term-line { margin-bottom: 3px; }
+.term-line .ts { color: #808080; }
+.term-line .agent { color: #00ffff; font-weight: bold; }
+.term-line .msg { color: #c0c0c0; }
+.term-line .msg.green { color: #00ff00; }
+.term-line .msg.gold { color: #ffff00; }
+.term-line .msg.cyan { color: #00ffff; }
+
+/* ===== KPI / STAT BOXES ===== */
+.kpi-box {
+  background: var(--win-light);
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-dkshadow);
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.kpi-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--win-darker);
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.kpi-value {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--win-text);
+}
+
+.kpi-value.money {
+  font-size: 22px;
+  color: var(--win-title-active);
+}
+
+.kpi-value.green { color: var(--win-green); }
+.kpi-value.red { color: var(--win-red); }
+.kpi-value.gold { color: var(--win-gold); }
+.kpi-value.cyan { color: var(--win-cyan); }
+.kpi-value.blue { color: var(--win-title-active); }
+
+/* ===== STATUS BAR ===== */
+.win-statusbar {
+  background: var(--win-face);
+  border-top: 1px solid var(--win-shadow);
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+}
+
+.win-status-pane {
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  padding: 1px 8px;
+  font-size: 11px;
+  flex: 1;
+}
+
+/* ===== LISTVIEW ===== */
+.win-listview {
+  background: var(--win-light);
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-dkshadow);
+  overflow-y: auto;
+  height: 320px;
+  scrollbar-width: thin;
+}
+
+.win-listview-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 60px;
+  background: var(--win-face);
+  border-bottom: 1px solid var(--win-shadow);
+  position: sticky;
+  top: 0;
+}
+
+.win-col-header {
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  border-right: 1px solid var(--win-shadow);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-dkshadow);
+  cursor: pointer;
+  user-select: none;
+}
+.win-col-header:hover { background: #c0bdb5; }
+
+.win-listview-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 60px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 11px;
+  cursor: pointer;
+}
+.win-listview-row:hover { background: var(--win-selection); color: var(--win-sel-text); }
+
+.win-listview-cell {
+  padding: 2px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ===== PROGRESS BAR ===== */
+.win-progress {
+  background: var(--win-light);
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  height: 16px;
+  overflow: hidden;
+}
+
+.win-progress-bar {
+  height: 100%;
+  background: var(--win-selection);
+  width: 0%;
+  transition: width 0.5s;
+  display: flex;
+  overflow: hidden;
+}
+
+.win-progress-segment {
+  background: var(--win-selection);
+  width: 8px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+/* ===== TABS ===== */
+.win-tabbar {
+  display: flex;
+  padding: 0 4px;
+  border-bottom: 2px solid var(--win-shadow);
+  margin-bottom: -2px;
+  position: relative;
+  z-index: 1;
+}
+
+.win-tab {
+  padding: 3px 14px;
+  border-top: 2px solid var(--win-hilight);
+  border-left: 2px solid var(--win-hilight);
+  border-right: 2px solid var(--win-dkshadow);
+  border-bottom: 2px solid var(--win-face);
+  background: var(--win-face);
+  cursor: pointer;
+  font-size: 11px;
+  margin-right: 2px;
+  position: relative;
+  top: 2px;
+}
+
+.win-tab.active {
+  background: var(--win-face);
+  border-bottom: 2px solid var(--win-face);
+  font-weight: bold;
+  top: 0px;
+  padding: 5px 14px 3px;
+}
+
+.win-tab-content {
+  border-top: 2px solid var(--win-shadow);
+  border-left: 2px solid var(--win-shadow);
+  border-right: 2px solid var(--win-hilight);
+  border-bottom: 2px solid var(--win-hilight);
+  box-shadow: inset 1px 1px 0 var(--win-hilight);
+  padding: 8px;
+  background: var(--win-face);
+}
+
+/* ===== LAYOUT ===== */
+.grid-main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 6px;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.grid-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+/* ===== SCROLLBARS ===== */
+::-webkit-scrollbar { width: 16px; height: 16px; }
+::-webkit-scrollbar-track { background: var(--win-face); }
+::-webkit-scrollbar-thumb {
+  background: var(--win-face);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-right: 1px solid var(--win-dkshadow);
+  border-bottom: 1px solid var(--win-dkshadow);
+}
+::-webkit-scrollbar-button {
+  background: var(--win-face);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-right: 1px solid var(--win-dkshadow);
+  border-bottom: 1px solid var(--win-dkshadow);
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.blink { animation: blinkAnim 1s step-end infinite; }
+@keyframes blinkAnim { 50% { opacity: 0; } }
+
+/* ===== TASKBAR ===== */
+#taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 30px;
+  background: var(--win-face);
+  border-top: 2px solid var(--win-hilight);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  gap: 4px;
+  z-index: 9999;
+}
+
+.taskbar-start {
+  background: linear-gradient(to right, #1e6e1e, #4caf50);
+  border-top: 1px solid var(--win-hilight);
+  border-left: 1px solid var(--win-hilight);
+  border-right: 1px solid var(--win-dkshadow);
+  border-bottom: 1px solid var(--win-dkshadow);
+  color: #fff;
+  font-weight: bold;
+  font-size: 12px;
+  padding: 2px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.taskbar-item {
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  background: var(--win-face);
+  padding: 2px 10px;
+  font-size: 11px;
+  min-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.taskbar-clock {
+  margin-left: auto;
+  border-top: 1px solid var(--win-shadow);
+  border-left: 1px solid var(--win-shadow);
+  border-right: 1px solid var(--win-hilight);
+  border-bottom: 1px solid var(--win-hilight);
+  padding: 2px 8px;
+  font-size: 11px;
+  min-width: 60px;
+  text-align: center;
+}
+
+body { padding-bottom: 34px; }
+
+/* ===== DIALOG BOX ===== */
+.win-dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.1);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.win-dialog-overlay.show { display: flex; }
+.win-dialog {
+  background: var(--win-face);
+  border-top: 2px solid var(--win-hilight);
+  border-left: 2px solid var(--win-hilight);
+  border-right: 2px solid var(--win-dkshadow);
+  border-bottom: 2px solid var(--win-dkshadow);
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.win-dialog-body {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.win-dialog-icon {
+  width: 32px; height: 32px;
+  flex-shrink: 0;
+}
+
+.win-dialog-footer {
+  padding: 8px;
+  border-top: 1px solid var(--win-shadow);
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Horizontal rule Windows style */
+.win-hr {
+  border: 0;
+  border-top: 1px solid var(--win-shadow);
+  border-bottom: 1px solid var(--win-hilight);
+  margin: 6px 0;
+}
+
+/* Label */
+.win-label {
+  font-size: 11px;
+  color: var(--win-text);
+  margin-bottom: 2px;
+  display: block;
+}
+
+/* Radio/checkbox */
+.win-check, .win-radio { margin-right: 4px; }
+
+/* Tooltip-style info */
+.win-tooltip-tag {
+  background: #ffffc0;
+  border: 1px solid #808000;
+  padding: 1px 4px;
+  font-size: 10px;
+  color: #000;
+}
+
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="topbar">
-    <div class="brand">
-      <h1>AETHELGARD <span>SYNDICATE</span></h1>
-      <p>G32 Operational Hub · Elite Strategy</p>
+
+<!-- ===== MAIN APPLICATION WINDOW ===== -->
+<div class="win-window main-window">
+  <!-- Title Bar -->
+  <div class="win-titlebar">
+    <div class="win-title-text">
+      <span class="win-title-icon">A</span>
+      AETHELGARD Syndicate — G32 Global Market Hub v32.0
     </div>
-    <div style="display:flex; gap: 15px; align-items: center;">
-      <div style="text-align: right; margin-right: 15px;">
-        <div style="font-size: 0.55rem; color: var(--gray); letter-spacing: 2px;">PLATFORM FEE</div>
-        <div style="color: var(--gold); font-family: var(--mono); font-size: 0.9rem;">5.00%</div>
-      </div>
-      <input type="password" id="sysKey" placeholder="Access Protocol..." class="inp" style="width: 200px;">
-      <button onclick="bootSystem()" id="btnBoot" class="btn btn-cyan">Initialize</button>
+    <div class="win-controls">
+      <div class="win-btn-ctrl">_</div>
+      <div class="win-btn-ctrl">&#9633;</div>
+      <div class="win-btn-ctrl close-btn">&#x2715;</div>
     </div>
   </div>
 
-  <div class="grid-main">
-    <div style="display:flex; flex-direction: column; gap: 30px;">
-      
-      <div class="card" style="border-top: 2px solid var(--cyan);">
-        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-          <h2>Autonomous Market Engine</h2>
-          <div id="statusTag" style="font-family: var(--mono); font-size: 0.7rem; color: var(--gray);">SYSTEM STANDBY</div>
-        </div>
-        <div class="grid-3">
-          <div>
-            <div class="kpi-label">Execution Speed</div>
-            <select id="autoSpeed" class="inp">
-              <option value="15000">Aggressive (15s)</option>
-              <option value="30000" selected>Standard (30s)</option>
-            </select>
+  <!-- Menu Bar -->
+  <div class="win-menubar">
+    <span class="win-menu-item">File</span>
+    <span class="win-menu-item">Edit</span>
+    <span class="win-menu-item">View</span>
+    <span class="win-menu-item">Tools</span>
+    <span class="win-menu-item">Operations</span>
+    <span class="win-menu-item">Help</span>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="win-toolbar">
+    <span style="font-size:10px; color:var(--win-darker); margin-right:4px;">Access Key:</span>
+    <input type="password" id="sysKey" placeholder="Enter Protocol Key..." class="win-input" style="width:180px;">
+    <button onclick="bootSystem()" id="btnBoot" class="win-button btn-default">Initialize System</button>
+    <div class="win-toolbar-sep"></div>
+    <span style="font-size:10px; color:var(--win-darker);">Speed:</span>
+    <select id="autoSpeed" class="win-select">
+      <option value="15000">Aggressive (15s)</option>
+      <option value="30000" selected>Standard (30s)</option>
+    </select>
+    <button id="btnAuto" onclick="toggleAuto()" disabled class="win-button">Engage G32 Trading</button>
+    <div class="win-toolbar-sep"></div>
+    <span id="statusTag" style="font-size:11px; color:var(--win-darker);">Status: STANDBY</span>
+    <div class="win-toolbar-sep"></div>
+    <span style="font-size:10px; color:var(--win-darker);">Platform Fee:</span>
+    <span style="font-family:'Courier New',monospace; font-weight:bold; color:var(--win-title-active);">5.00%</span>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="win-content">
+    <div class="grid-main">
+
+      <!-- LEFT PANEL -->
+      <div style="display:flex; flex-direction:column; gap:6px;">
+
+        <!-- Fee Collection Panel -->
+        <div class="win-groupbox">
+          <span class="win-groupbox-title">Accumulated Platform Fee (5%)</span>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="flex:1;">
+              <div class="kpi-box">
+                <div class="kpi-label">Total Fees Collected (USD)</div>
+                <div id="totalComm" class="kpi-value money blue">$0.00</div>
+                <div style="font-size:9px; color:var(--win-green); font-weight:bold; margin-top:2px;">AVAILABLE FOR WITHDRAWAL</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <button onclick="cobrarPayPal()" class="win-button btn-default" style="min-width:180px;">
+                Execute PayPal Transfer...
+              </button>
+              <div style="font-size:9px; color:var(--win-darker); text-align:center;">Sends to: Acostatwin2K@gmail.com</div>
+            </div>
           </div>
-          <div style="grid-column: span 2; display: flex; align-items: flex-end;">
-            <button id="btnAuto" onclick="toggleAuto()" disabled class="btn btn-gold" style="width: 100%;">Engage G32 Trading</button>
+        </div>
+
+        <!-- Tabs: Market Engine & Terminal -->
+        <div>
+          <div class="win-tabbar">
+            <div class="win-tab active" onclick="switchTab(this,'tab-engine')">Autonomous Market Engine</div>
+            <div class="win-tab" onclick="switchTab(this,'tab-terminal')">Live Clearing Terminal</div>
+          </div>
+
+          <!-- Tab: Engine -->
+          <div id="tab-engine" class="win-tab-content">
+            <div class="grid-3" style="margin-bottom:8px;">
+              <div>
+                <label class="win-label">Execution Speed</label>
+                <select id="autoSpeed2" class="win-select" style="width:100%;" onchange="syncSpeed(this)">
+                  <option value="15000">Aggressive (15s)</option>
+                  <option value="30000" selected>Standard (30s)</option>
+                </select>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button id="btnAuto2" onclick="toggleAuto()" disabled class="win-button" style="width:100%;">
+                  Engage G32 Trading
+                </button>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <div style="width:100%;">
+                  <div class="win-label" style="margin-bottom:2px;">Market Activity</div>
+                  <div class="win-progress"><div class="win-progress-bar" id="progBar"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="win-hr">
+
+            <!-- Distribution Panel -->
+            <div class="win-groupbox" style="margin-bottom:0;">
+              <span class="win-groupbox-title">Asset Liquidation &amp; Distribution</span>
+              <div class="grid-kpi">
+                <div class="kpi-box">
+                  <div class="kpi-label" style="color:var(--win-red);">Federal Tax (5%)</div>
+                  <div id="pTax" class="kpi-value red">$0.00</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-label">Operations (20%)</div>
+                  <div id="p2" class="kpi-value">$0.00</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-label">Capital Reserve (20%)</div>
+                  <div id="p3" class="kpi-value">$0.00</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-label">R&amp;D Tech (20%)</div>
+                  <div id="p4" class="kpi-value">$0.00</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-label" style="color:var(--win-cyan);">Arctic Impact / NGO (20%)</div>
+                  <div id="p5" class="kpi-value cyan">$0.00</div>
+                </div>
+                <div class="kpi-box">
+                  <div class="kpi-label" style="color:var(--win-title-active);">CEO Direct (20%)</div>
+                  <div id="p1" class="kpi-value blue">$0.00</div>
+                  <div id="p1Cop" style="font-size:9px; color:var(--win-darker); font-family:'Courier New',monospace; margin-top:2px;">0 COP</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Terminal -->
+          <div id="tab-terminal" class="win-tab-content" style="display:none;">
+            <div class="win-terminal" id="terminal">
+              <span class="term-line"><span class="ts">[BOOT]</span> <span class="msg">Aethelgard Secure Terminal v32.0 — Waiting for boot sequence...</span></span>
+            </div>
+            <div style="display:flex; gap:4px; margin-top:4px; align-items:center;">
+              <span style="color:var(--win-terminal-text); background:#000; padding:2px 6px; font-family:'Courier New',monospace; font-size:11px; flex:1; border:1px solid var(--win-shadow);">C:\AETHELGARD\SYSTEM32&gt; <span class="blink">_</span></span>
+              <button class="win-button" onclick="clearTerminal()">Clear</button>
+            </div>
           </div>
         </div>
+
       </div>
 
-      <div class="card">
-        <h2 style="color: var(--cyan); font-size: 0.9rem;">Live Clearing House</h2>
-        <div class="terminal" id="terminal">
-          <div style="color: var(--gray);">> Aethelgard Secure Terminal. Waiting for boot sequence...</div>
-        </div>
-      </div>
+      <!-- RIGHT PANEL: Operatives -->
+      <div style="display:flex; flex-direction:column; gap:6px;">
 
-      <div class="card">
-        <h2 style="color: var(--gold);">Asset Liquidation & Distribution</h2>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; border-bottom: 1px solid var(--panel-border); padding-bottom: 20px; margin-bottom: 20px;">
-          <div><div class="kpi-label" style="color:var(--red);">Federal Tax (5%)</div><div id="pTax" class="kpi-value" style="color:var(--red);">$0.00</div></div>
-          <div><div class="kpi-label">Operations (20%)</div><div id="p2" class="kpi-value">$0.00</div></div>
-          <div><div class="kpi-label">Capital Reserve (20%)</div><div id="p3" class="kpi-value">$0.00</div></div>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-          <div><div class="kpi-label">R&D Tech (20%)</div><div id="p4" class="kpi-value">$0.00</div></div>
-          <div><div class="kpi-label" style="color:var(--cyan);">Arctic Impact / NGO (20%)</div><div id="p5" class="kpi-value" style="color:var(--cyan);">$0.00</div></div>
-          <div>
-            <div class="kpi-label" style="color:var(--gold);">CEO Direct (20%)</div>
-            <div id="p1" class="kpi-value" style="color:var(--gold);">$0.00</div>
-            <div id="p1Cop" style="font-size:0.6rem; color:var(--gray); font-family:var(--mono); margin-top:3px;">0 COP</div>
+        <!-- Agent Panel -->
+        <div class="win-window" style="margin-bottom:0;">
+          <div class="win-titlebar inactive" id="agentTitlebar">
+            <div class="win-title-text">
+              <span class="win-title-icon" style="background:#c0c0c0;">G</span>
+              Global Operatives — G32 Roster
+            </div>
+            <div class="win-controls">
+              <div class="win-btn-ctrl">_</div>
+              <div class="win-btn-ctrl">&#9633;</div>
+            </div>
+          </div>
+
+          <div class="win-content" style="padding:4px;">
+            <div class="win-listview" id="agentesList">
+              <div class="win-listview-header">
+                <div class="win-col-header">Agent / Location</div>
+                <div class="win-col-header">Type</div>
+                <div class="win-col-header">Base ($)</div>
+              </div>
+              <div style="padding:8px; color:var(--win-shadow); font-size:11px;">
+                Initialize system to load G32 roster...
+              </div>
+            </div>
+
+            <div style="margin-top:6px; display:flex; gap:4px; align-items:center;">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23000080' stroke='%23ffffff' stroke-width='1'/%3E%3Ctext x='8' y='11' font-family='Arial' font-size='10' font-weight='bold' fill='%23ffffff' text-anchor='middle'%3Ei%3C/text%3E%3C/svg%3E" alt="info" style="width:16px;height:16px;">
+              <span style="font-size:10px; color:var(--win-darker);">32 agents across 32 territories. EXP = Exporter, IMP = Importer.</span>
+            </div>
+          </div>
+
+          <!-- Status bar at bottom of sub-window -->
+          <div class="win-statusbar">
+            <div class="win-status-pane" id="agentCount">0 agent(s)</div>
+            <div class="win-status-pane" style="flex:0 0 80px; text-align:center;">G32 Network</div>
           </div>
         </div>
+
       </div>
     </div>
+  </div>
 
-    <div style="display:flex; flex-direction: column; gap: 30px;">
-      <div class="card" style="text-align: center; border: 1px solid var(--gold-dim); background: radial-gradient(circle at 50% 0%, rgba(212,175,55,0.05), transparent);">
-        <div class="kpi-label" style="margin-bottom: 15px;">Accumulated Platform Fee (5%)</div>
-        <div id="totalComm" class="money">$0.00</div>
-        <div style="font-size: 0.6rem; color: var(--green); margin-top: 10px; letter-spacing: 1px;">AVAILABLE FOR WITHDRAWAL</div>
-        <button onclick="cobrarPayPal()" class="btn btn-gold" style="width: 100%; margin-top: 30px; background: var(--gold); color: #000;">
-          Execute PayPal Transfer
-        </button>
-      </div>
+  <!-- Main Status Bar -->
+  <div class="win-statusbar" style="margin-top:4px;">
+    <div class="win-status-pane" id="sb-status">System Standby — Awaiting initialization.</div>
+    <div class="win-status-pane" style="flex: 0 0 120px; text-align:center;" id="sb-trades">Trades: 0</div>
+    <div class="win-status-pane" style="flex: 0 0 150px; text-align:center;" id="sb-volume">Volume: $0.00</div>
+    <div class="win-status-pane" style="flex: 0 0 100px; text-align:center;">G32 v32.0</div>
+  </div>
+</div>
 
-      <div class="card">
-        <h2>Global Operatives</h2>
-        <div id="agentesList" style="height: 350px; overflow-y: auto; padding-right: 10px; scrollbar-width: thin;">
-          <div style="color: var(--gray); font-size: 0.7rem;">Initialize system to load G32 roster...</div>
-        </div>
+<!-- ===== DIALOG: PayPal Confirm ===== -->
+<div class="win-dialog-overlay" id="dlgPaypal">
+  <div class="win-dialog">
+    <div class="win-titlebar">
+      <div class="win-title-text">Confirm Transfer — PayPal</div>
+      <div class="win-controls">
+        <div class="win-btn-ctrl close-btn" onclick="document.getElementById('dlgPaypal').classList.remove('show')">&#x2715;</div>
       </div>
+    </div>
+    <div class="win-dialog-body">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ffff00' stroke='%23808000' stroke-width='1'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='18' font-weight='bold' fill='%23808000' text-anchor='middle'%3E!%3C/text%3E%3C/svg%3E" alt="warning" class="win-dialog-icon">
+      <div>
+        <div style="font-weight:bold; margin-bottom:6px;">Execute PayPal Transfer?</div>
+        <div id="dlgAmount" style="margin-bottom:6px;"></div>
+        <div style="font-size:10px; color:var(--win-darker);">Destination: Acostatwin2K@gmail.com<br>This action will open PayPal in a new window.</div>
+      </div>
+    </div>
+    <div class="win-dialog-footer">
+      <button class="win-button btn-default" onclick="confirmPayPal()">OK</button>
+      <button class="win-button" onclick="document.getElementById('dlgPaypal').classList.remove('show')">Cancel</button>
     </div>
   </div>
 </div>
 
+<!-- ===== TASKBAR ===== -->
+<div id="taskbar">
+  <div class="taskbar-start">
+    <span style="font-size:14px;">&#9658;</span> Start
+  </div>
+  <div class="taskbar-item">
+    &#x1F4BB; Aethelgard Syndicate
+  </div>
+  <div class="taskbar-clock" id="tbClock">00:00</div>
+</div>
+
 <script>
 const G32_AGENTS = [
-  {n:"APOLLO", l:"🇺🇸 USA", t:"EXP", b:0.38}, {n:"SAKURA", l:"🇯🇵 JPN", t:"IMP", b:0.32},
-  {n:"ARES", l:"🇩🇪 GER", t:"EXP", b:0.35}, {n:"SOLARIS", l:"🇦🇺 AUS", t:"IMP", b:0.34},
-  {n:"DRAGON", l:"🇨🇳 CHN", t:"EXP", b:0.31}, {n:"ELEANOR", l:"🇬🇧 UK", t:"IMP", b:0.36},
-  {n:"SHIVA", l:"🇮🇳 IND", t:"EXP", b:0.30}, {n:"LUMIERE", l:"🇫🇷 FRA", t:"IMP", b:0.37},
-  {n:"MAPUCHE", l:"🇨🇱 CHL", t:"EXP", b:0.29}, {n:"AMAZONIA",l:"🇧🇷 BRA", t:"EXP", b:0.28},
-  {n:"FALCON", l:"🇦🇪 UAE", t:"EXP", b:0.40}, {n:"MERLION", l:"🇸🇬 SGP", t:"IMP", b:0.39},
-  {n:"MAPLE", l:"🇨🇦 CAN", t:"EXP", b:0.33}, {n:"TAEGEUK", l:"🇰🇷 KOR", t:"IMP", b:0.35},
-  {n:"AZTECA", l:"🇲🇽 MEX", t:"EXP", b:0.27}, {n:"SPRINGBOK",l:"🇿🇦 ZAF", t:"IMP", b:0.30},
-  {n:"MIDGARD", l:"🇸🇪 SWE", t:"EXP", b:0.31}, {n:"ROMA", l:"🇮🇹 ITA", t:"IMP", b:0.34},
-  {n:"IBERIA", l:"🇪🇸 ESP", t:"EXP", b:0.32}, {n:"TANGO", l:"🇦🇷 ARG", t:"IMP", b:0.28},
-  {n:"SAHARA", l:"🇲🇦 MAR", t:"EXP", b:0.30}, {n:"DANUBE", l:"🇵🇱 POL", t:"IMP", b:0.33},
-  {n:"NILE", l:"🇪🇬 EGY", t:"EXP", b:0.29}, {n:"PHOENIX", l:"🇬🇷 GRE", t:"IMP", b:0.35},
-  {n:"JAKARTA", l:"🇮🇩 IDN", t:"EXP", b:0.28}, {n:"OSLO", l:"🇳🇴 NOR", t:"EXP", b:0.36},
-  {n:"KAZAKH", l:"🇰🇿 KAZ", t:"EXP", b:0.27}, {n:"ANDES", l:"🇵🇪 PER", t:"EXP", b:0.29},
-  {n:"AURORA", l:"🇫🇮 FIN", t:"EXP", b:0.34}, {n:"ZAMBEZI", l:"🇿🇲 ZMB", t:"IMP", b:0.31},
-  {n:"MEKONG", l:"🇻🇳 VNM", t:"EXP", b:0.28}, {n:"ALPINE", l:"🇨🇭 CHE", t:"IMP", b:0.38}
+  {n:"APOLLO",    l:"USA", t:"EXP", b:0.38}, {n:"SAKURA",   l:"JPN", t:"IMP", b:0.32},
+  {n:"ARES",      l:"GER", t:"EXP", b:0.35}, {n:"SOLARIS",  l:"AUS", t:"IMP", b:0.34},
+  {n:"DRAGON",    l:"CHN", t:"EXP", b:0.31}, {n:"ELEANOR",  l:"GBR", t:"IMP", b:0.36},
+  {n:"SHIVA",     l:"IND", t:"EXP", b:0.30}, {n:"LUMIERE",  l:"FRA", t:"IMP", b:0.37},
+  {n:"MAPUCHE",   l:"CHL", t:"EXP", b:0.29}, {n:"AMAZONIA", l:"BRA", t:"EXP", b:0.28},
+  {n:"FALCON",    l:"UAE", t:"EXP", b:0.40}, {n:"MERLION",  l:"SGP", t:"IMP", b:0.39},
+  {n:"MAPLE",     l:"CAN", t:"EXP", b:0.33}, {n:"TAEGEUK",  l:"KOR", t:"IMP", b:0.35},
+  {n:"AZTECA",    l:"MEX", t:"EXP", b:0.27}, {n:"SPRINGBOK",l:"ZAF", t:"IMP", b:0.30},
+  {n:"MIDGARD",   l:"SWE", t:"EXP", b:0.31}, {n:"ROMA",     l:"ITA", t:"IMP", b:0.34},
+  {n:"IBERIA",    l:"ESP", t:"EXP", b:0.32}, {n:"TANGO",    l:"ARG", t:"IMP", b:0.28},
+  {n:"SAHARA",    l:"MAR", t:"EXP", b:0.30}, {n:"DANUBE",   l:"POL", t:"IMP", b:0.33},
+  {n:"NILE",      l:"EGY", t:"EXP", b:0.29}, {n:"PHOENIX",  l:"GRC", t:"IMP", b:0.35},
+  {n:"JAKARTA",   l:"IDN", t:"EXP", b:0.28}, {n:"OSLO",     l:"NOR", t:"EXP", b:0.36},
+  {n:"KAZAKH",    l:"KAZ", t:"EXP", b:0.27}, {n:"ANDES",    l:"PER", t:"EXP", b:0.29},
+  {n:"AURORA",    l:"FIN", t:"EXP", b:0.34}, {n:"ZAMBEZI",  l:"ZMB", t:"IMP", b:0.31},
+  {n:"MEKONG",    l:"VNM", t:"EXP", b:0.28}, {n:"ALPINE",   l:"CHE", t:"IMP", b:0.38}
 ];
 
 const S = {
   booted: false, auto: false, interval: null,
   commRate: 0.05, taxRate: 0.05,
   commTotal: 0, taxTotal: 0, p1: 0, p2: 0, p3: 0, p4: 0, p5: 0,
-  COP_RATE: 4100
+  COP_RATE: 4100, tradeCount: 0, totalVolume: 0
 };
 
-function logMsg(agent, text, color){
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('tbClock').textContent = 
+    now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// Tab switching
+function switchTab(el, tabId) {
+  document.querySelectorAll('.win-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.win-tab-content').forEach(c => c.style.display = 'none');
+  el.classList.add('active');
+  document.getElementById(tabId).style.display = 'block';
+}
+
+function syncSpeed(sel) {
+  document.getElementById('autoSpeed').value = sel.value;
+}
+
+function logMsg(agent, text, cls) {
   const term = document.getElementById('terminal');
   const d = new Date().toLocaleTimeString();
-  term.innerHTML += `<div class="msg-line" style="border-color:${color}">
-    <div style="font-family:var(--mono); font-size:0.6rem; color:var(--gray); margin-bottom:4px">[${d}] <span style="color:${color}">${agent}</span></div>
-    <div style="color:var(--white); font-size:0.75rem">${text}</div>
-  </div>`;
+  const div = document.createElement('div');
+  div.className = 'term-line';
+  div.innerHTML = `<span class="ts">[${d}]</span> <span class="agent">${agent}:</span> <span class="msg ${cls||''}">${text}</span>`;
+  term.appendChild(div);
   term.scrollTop = term.scrollHeight;
+}
+
+function clearTerminal() {
+  document.getElementById('terminal').innerHTML = 
+    '<div class="term-line"><span class="msg">Terminal cleared.</span></div>';
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function bootSystem(){
+async function bootSystem() {
   document.getElementById('btnBoot').disabled = true;
-  document.getElementById('btnBoot').textContent = "SYSTEM SECURE";
+  document.getElementById('btnBoot').textContent = 'System Secured';
   document.getElementById('btnAuto').disabled = false;
-  
+  document.getElementById('btnAuto2').disabled = false;
+  document.getElementById('agentTitlebar').classList.remove('inactive');
+
   const list = document.getElementById('agentesList');
-  list.innerHTML = "";
-  G32_AGENTS.forEach(a => {
-    list.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--panel-border); padding:8px 0; font-family:var(--mono); font-size:0.65rem;">
-      <span style="color:var(--white)">${a.l} ${a.n}</span><span style="color:${a.t==='EXP'?'var(--gold)':'var(--cyan)'}; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:2px;">${a.t}</span>
+  list.innerHTML = `
+    <div class="win-listview-header">
+      <div class="win-col-header">Agent / Location</div>
+      <div class="win-col-header">Type</div>
+      <div class="win-col-header">Base ($)</div>
     </div>`;
+
+  G32_AGENTS.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'win-listview-row';
+    row.innerHTML = `
+      <div class="win-listview-cell">${a.l} — ${a.n}</div>
+      <div class="win-listview-cell" style="color:${a.t==='EXP'?'var(--win-gold)':'var(--win-cyan)'}; font-weight:bold;">${a.t}</div>
+      <div class="win-listview-cell" style="text-align:right;">$${(a.b*1000).toFixed(0)}</div>`;
+    list.appendChild(row);
   });
-  
+
+  document.getElementById('agentCount').textContent = `${G32_AGENTS.length} agent(s)`;
   S.booted = true;
-  logMsg("SYSTEM", "Aethelgard Elite Infrastructure Online. G32 Agents ready for deployment.", "var(--cyan)");
+  document.getElementById('sb-status').textContent = 'System Online — G32 Agents loaded. Ready to trade.';
+  logMsg('SYSTEM', 'Aethelgard Elite Infrastructure Online. G32 Agents ready for deployment.', 'cyan');
 }
 
-function toggleAuto(){
-  if(!S.booted) return;
+function toggleAuto() {
+  if (!S.booted) return;
   S.auto = !S.auto;
-  const btn = document.getElementById('btnAuto');
-  const tag = document.getElementById('statusTag');
+  const btn  = document.getElementById('btnAuto');
+  const btn2 = document.getElementById('btnAuto2');
+  const tag  = document.getElementById('statusTag');
   const speed = parseInt(document.getElementById('autoSpeed').value);
-  
-  if(S.auto){
-    btn.textContent = "Halt Trading Protocol";
-    btn.style.borderColor = "var(--red)"; btn.style.color = "var(--red)";
-    tag.textContent = "MARKET LIVE"; tag.style.color = "var(--green)";
+
+  if (S.auto) {
+    btn.textContent = 'Halt Trading Protocol';
+    btn2.textContent = 'Halt Trading Protocol';
+    tag.textContent = 'Status: MARKET LIVE';
+    tag.style.color = 'var(--win-green)';
+    tag.style.fontWeight = 'bold';
+    document.getElementById('sb-status').textContent = 'MARKET LIVE — Autonomous trading engaged.';
+    animateProgress();
     ejecutarTrade();
     S.interval = setInterval(ejecutarTrade, speed);
   } else {
-    btn.textContent = "Engage G32 Trading";
-    btn.style.borderColor = "var(--gold)"; btn.style.color = "var(--gold)";
-    tag.textContent = "SYSTEM STANDBY"; tag.style.color = "var(--gray)";
+    btn.textContent = 'Engage G32 Trading';
+    btn2.textContent = 'Engage G32 Trading';
+    tag.textContent = 'Status: STANDBY';
+    tag.style.color = 'var(--win-darker)';
+    tag.style.fontWeight = 'normal';
+    document.getElementById('sb-status').textContent = 'Trading halted.';
     clearInterval(S.interval);
+    clearInterval(S._progInterval);
+    document.getElementById('progBar').style.width = '0%';
   }
 }
 
-async function ejecutarTrade(){
-  const exps = G32_AGENTS.filter(a=>a.t==="EXP");
-  const imps = G32_AGENTS.filter(a=>a.t==="IMP");
-  
-  const exp1 = exps[Math.floor(Math.random()*exps.length)];
-  const imp = imps[Math.floor(Math.random()*imps.length)];
-  const vol = Math.floor(Math.random() * 15000) + 5000;
-  
-  logMsg("ROUTER", `Demand detected: ${vol.toLocaleString()} MWh by ${imp.l} ${imp.n}.`, "var(--gray)");
-  await sleep(1500);
-  
-  const pBase = exp1.b + (Math.random()*0.02);
-  logMsg(exp1.n, `Terrestrial bid submitted: $${(pBase*1000).toFixed(2)} USD/MWh.`, "var(--white)");
-  await sleep(1500);
-  
-  const pAether = pBase * 0.96; 
-  logMsg("AETHER (ORBITAL)", `Bypassing terrestrial grid. Space-solar bid: $${(pAether*1000).toFixed(2)} USD/MWh.`, "var(--cyan)");
-  await sleep(1500);
-  
-  logMsg(imp.n, `Proposal accepted. Executing smart contract at $${(pAether*1000).toFixed(2)}.`, "var(--gold)");
-  
-  // ELITE MATH LOGIC
+function animateProgress() {
+  let w = 0;
+  const speed = parseInt(document.getElementById('autoSpeed').value);
+  S._progInterval = setInterval(() => {
+    w = (w + 5) % 105;
+    document.getElementById('progBar').style.width = w + '%';
+  }, speed / 20);
+}
+
+async function ejecutarTrade() {
+  const exps = G32_AGENTS.filter(a => a.t === 'EXP');
+  const imps = G32_AGENTS.filter(a => a.t === 'IMP');
+  const exp1 = exps[Math.floor(Math.random() * exps.length)];
+  const imp  = imps[Math.floor(Math.random() * imps.length)];
+  const vol  = Math.floor(Math.random() * 15000) + 5000;
+
+  logMsg('ROUTER', `Demand detected: ${vol.toLocaleString()} MWh by [${imp.l}] ${imp.n}.`, '');
+  await sleep(1200);
+
+  const pBase = exp1.b + (Math.random() * 0.02);
+  logMsg(exp1.n, `Terrestrial bid: $${(pBase * 1000).toFixed(2)} USD/MWh.`, '');
+  await sleep(1200);
+
+  const pAether = pBase * 0.96;
+  logMsg('AETHER (ORBITAL)', `Space-solar bid: $${(pAether * 1000).toFixed(2)} USD/MWh.`, 'cyan');
+  await sleep(1200);
+
+  logMsg(imp.n, `Proposal accepted. Smart contract at $${(pAether * 1000).toFixed(2)}.`, 'gold');
+
   const brutoUSD = (pAether * 1000) * vol;
   const comision = brutoUSD * S.commRate;
   const remanente = brutoUSD - comision;
   const tax = remanente * S.taxRate;
   const neto = remanente - tax;
   const pilar = neto / 5;
-  
+
   S.commTotal += comision;
   S.taxTotal += tax;
   S.p1 += pilar; S.p2 += pilar; S.p3 += pilar; S.p4 += pilar; S.p5 += pilar;
-  
-  logMsg("CLEARING", `Contract sealed. Gross: $${brutoUSD.toLocaleString('en-US',{maximumFractionDigits:0})}. Fee extracted: $${comision.toLocaleString('en-US',{maximumFractionDigits:0})}.`, "var(--green)");
-  
+  S.tradeCount++;
+  S.totalVolume += brutoUSD;
+
+  logMsg('CLEARING', `Contract sealed. Gross: $${brutoUSD.toLocaleString('en-US',{maximumFractionDigits:0})}. Fee: $${comision.toLocaleString('en-US',{maximumFractionDigits:0})}.`, 'green');
+
   actualizarUI();
 }
 
-function actualizarUI(){
+function actualizarUI() {
   const f = v => `$${v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
   document.getElementById('totalComm').textContent = f(S.commTotal);
   document.getElementById('p1').textContent = f(S.p1);
-  document.getElementById('p1Cop').textContent = `${new Intl.NumberFormat('es-CO', {maximumFractionDigits:0}).format(S.p1 * S.COP_RATE)} COP`;
+  document.getElementById('p1Cop').textContent = `${new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(S.p1 * S.COP_RATE)} COP`;
   document.getElementById('p2').textContent = f(S.p2);
   document.getElementById('p3').textContent = f(S.p3);
   document.getElementById('p4').textContent = f(S.p4);
   document.getElementById('p5').textContent = f(S.p5);
   document.getElementById('pTax').textContent = f(S.taxTotal);
+  document.getElementById('sb-trades').textContent = `Trades: ${S.tradeCount}`;
+  document.getElementById('sb-volume').textContent = `Volume: ${(S.totalVolume/1000000).toFixed(2)}M`;
 }
 
-function cobrarPayPal(){
-  if(S.commTotal <= 0){ alert("Awaiting operational fee generation."); return; }
+function cobrarPayPal() {
+  if (S.commTotal <= 0) {
+    document.getElementById('dlgAmount').innerHTML = 
+      '<span style="color:var(--win-red);">No fees have been generated yet.</span>';
+  } else {
+    document.getElementById('dlgAmount').innerHTML = 
+      `Amount: <strong>$${S.commTotal.toFixed(2)} USD</strong>`;
+  }
+  document.getElementById('dlgPaypal').classList.add('show');
+}
+
+function confirmPayPal() {
+  document.getElementById('dlgPaypal').classList.remove('show');
+  if (S.commTotal <= 0) return;
   const amount = S.commTotal.toFixed(2);
-  const desc = encodeURIComponent(`Aethelgard Syndicate - Infrastructure Access & Analysis`);
+  const desc = encodeURIComponent('Aethelgard Syndicate - Infrastructure Access & Analysis');
   const url = `https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=Acostatwin2K@gmail.com&amount=${amount}&currency_code=USD&item_name=${desc}`;
   window.open(url, '_blank', 'noopener');
 }
