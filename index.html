@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETHELGARD v83.0 | Real-World DePIN Edition</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Outfit:wght@300;400;600;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --bg: #020306; --s1: #06090f; --s2: #0b1018; --s3: #111824;
+            --c: #00f2ff; --g: #00ff9d; --gd: #f5d142; --p: #bd93f9; --r: #ff5555;
+            --sol: #9945FF; --eth: #627eea; --glw: #FFD700; --arctic: #a0e8ff; --tx: #8b949e; --w: #ffffff;
+        }
+        body { background-color: var(--bg); color: var(--tx); font-family: 'Outfit', sans-serif; overflow-x: hidden; margin: 0; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-display { font-family: 'Rajdhani', sans-serif; }
+        .glass { background: var(--s2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; }
+        .neon-text { color: var(--c); text-shadow: 0 0 10px rgba(0,242,255,0.5); }
+        .arctic-text { color: var(--arctic); text-shadow: 0 0 15px rgba(160,232,255,0.6); }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
+
+        .log-container { font-family: 'JetBrains Mono'; font-size: 0.7rem; height: 180px; overflow-y: auto; background: var(--s1); padding: 10px; border: 1px solid rgba(0,242,255,0.1); color: var(--g); border-radius: 8px;}
+        .chat-box { font-family: 'JetBrains Mono'; font-size: 0.75rem; height: 280px; overflow-y: auto; background: #000; padding: 15px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; }
+        
+        .btn-quantum { background: linear-gradient(90deg, var(--sol), var(--c)); color: #000; font-weight: 800; border: none; transition: 0.3s; cursor: pointer; border-radius: 8px; text-transform: uppercase; font-size: 10px; padding: 12px 16px; }
+        .btn-quantum:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0,242,255,0.4); }
+        .btn-arctic { background: linear-gradient(90deg, var(--arctic), var(--c)); color: #000; font-weight: 800; transition: 0.3s; cursor: pointer; border-radius: 8px;}
+        .btn-arctic:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(160,232,255,0.5); }
+        .btn-invasion { background: linear-gradient(90deg, var(--r), #660000); color: #fff; font-weight: 800; padding: 10px 14px; border-radius: 6px; font-size: 9px; cursor: pointer; text-transform: uppercase; }
+        .btn-snipe { background: var(--r); color: #fff; font-weight: 800; transition: 0.3s; cursor: pointer; border: 1px solid #ff0000; border-radius: 8px;}
+        .btn-snipe:hover { background: #ff0000; box-shadow: 0 0 20px rgba(255,0,0,0.6); }
+
+        .ticker-wrap { background: var(--s1); border-bottom: 1px solid rgba(255,255,255,0.05); overflow: hidden; white-space: nowrap; padding: 6px 0; }
+        .ticker { display: inline-block; animation: ticker 45s linear infinite; font-family: 'JetBrains Mono'; font-size: 10px; color: var(--tx); }
+        @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+        #global-map { height: 350px; border-radius: 12px; filter: grayscale(1) invert(1) contrast(1.2) brightness(0.8); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--c); border-radius: 10px; }
+        .reactor-core { animation: pulse-core 4s infinite alternate; }
+        @keyframes pulse-core { from { box-shadow: 0 0 10px rgba(255,215,0,0.1); } to { box-shadow: 0 0 40px rgba(255,215,0,0.3); } }
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const CEO_NAME = "Karen Andrea Corredor Acosta";
+    const DESTINATION_WALLET = "9FJUD1YJeb8e9S6AAxcXhS6LDt6Kojcj5iwfCWPggqhS";
+    const GLW_RATE = 0.1500; 
+
+    const App = () => {
+        const [activeTab, setActiveTab] = useState('dashboard');
+        
+        // --- LOGS & AUDIT ---
+        const [logs, setLogs] = useState(["[SISTEMA] v83.0 Real-World DePIN Edition Online.", "[CEREBRO] Sincronizando Malla de Terminales Físicas..."]);
+        const [archiveRecords, setArchiveRecords] = useState([{ id: "AET-001", date: new Date().toLocaleDateString(), desc: "Instancia Física v83 Inicializada", type: "SYSTEM" }]);
+        
+        // --- FINANZAS & DEFI ---
+        const [solBalance, setSolBalance] = useState(14.050);
+        const [glwBalance, setGlwBalance] = useState(3200.00);
+        const [stakedGlw, setStakedGlw] = useState(1000);
+        const [yieldAcc, setYieldAcc] = useState(0);
+        const [collateral, setCollateral] = useState(0);
+        const [debt, setDebt] = useState(0);
+        const [wealthHistory, setWealthHistory] = useState(Array(20).fill(500));
+        const [insuranceActive, setInsuranceActive] = useState(false);
+
+        // --- FILANTROPÍA (5%) ---
+        const [reservaInstitucional, setReservaInstitucional] = useState(0); 
+        const [arcticFund, setArcticFund] = useState(0);
+        const [ngoFund, setNgoFund] = useState(0);
+
+        // --- EMS & SUBASTA ---
+        const [emsData, setEmsData] = useState({ cons: 8.2, gen: 14.5, surplus: 6.3 });
+        const [aiPilot, setAiPilot] = useState(true);
+        const [oraclePrice, setOraclePrice] = useState(0.080);
+        const [auction, setAuction] = useState({ active: false, asset: '', vol: 0, currentPrice: 0, currency: 'SOL', seller: '' });
+        
+        // --- CHAT IA ---
+        const [chat, setChat] = useState([]);
+        const [isNegotiating, setIsNegotiating] = useState(false);
+
+        // --- TERMINALES GLOBALES (REAL WORLD INTEGRATION) ---
+        const [terminales, setTerminales] = useState([
+            { id: "POWR-SOL", name: "Powerledger (Energy Oracle)", lat: -31.95, lng: 115.86, status: "Active", compliance: 100, cost: 15.0, owned: false, color: "#00ff9d" },
+            { id: "HELIUM-IOT", name: "Helium DePIN Network", lat: 37.77, lng: -122.41, status: "Active", compliance: 100, cost: 5.5, owned: false, color: "#bd93f9" },
+            { id: "ARCTIC-SEC", name: "Arctic Securities", lat: 59.91, lng: 10.75, status: "Active", compliance: 100, cost: 25.0, owned: false, color: "#a0e8ff" },
+            { id: "ELIZA-01", name: "Eliza (Terminal USA)", lat: 40.71, lng: -74.00, status: "Active", compliance: 100, cost: 5.0, owned: false, color: "#f5d142" }
+        ]);
+
+        // --- AUDIO ENGINE ---
+        const playTone = (freq, type = 'sine', duration = 0.2) => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+        };
+        const playAlert = () => { playTone(880, 'triangle', 0.15); setTimeout(() => playTone(1318, 'triangle', 0.25), 60); };
+        const playSnipe = () => { playTone(400, 'square', 0.1); setTimeout(() => playTone(800, 'square', 0.2), 100); };
+
+        const addLog = (m) => setLogs(p => [`[${new Date().toLocaleTimeString()}] ${m}`, ...p].slice(0, 15));
+        const addChat = (sender, msg, color) => setChat(p => [...p, { sender, msg, color, time: new Date().toLocaleTimeString() }]);
+
+        const calculateWealth = () => solBalance + ((glwBalance + stakedGlw + yieldAcc + collateral) * GLW_RATE) - debt;
+
+        // --- EFECTOS BASE ---
+        useEffect(() => {
+            const int = setInterval(() => { if (stakedGlw > 0) setYieldAcc(p => p + (stakedGlw * 0.125 / 31536000)); }, 1000);
+            return () => clearInterval(int);
+        }, [stakedGlw]);
+
+        useEffect(() => {
+            const int = setInterval(() => { setWealthHistory(prev => [...prev.slice(-19), calculateWealth()]); }, 5000);
+            return () => clearInterval(int);
+        }, [solBalance, glwBalance, stakedGlw, collateral, debt]);
+
+        // --- MAPA LEAFLET ---
+        const mapRef = useRef(null);
+        useEffect(() => {
+            if (activeTab === 'malla' && !mapRef.current) {
+                const map = L.map('global-map').setView([20, 0], 2);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+                terminales.forEach(a => {
+                    L.circleMarker([a.lat, a.lng], { radius: 8, fillColor: a.color, color: "#fff", weight: 1, fillOpacity: 0.9 }).addTo(map)
+                    .bindPopup(`<b>${a.name}</b><br>Compliance: ${a.compliance}%`);
+                });
+                mapRef.current = map;
+            }
+        }, [activeTab, terminales]);
+
+        // --- LÓGICA FILANTROPÍA ---
+        const distributeTaxes = (amount) => {
+            setReservaInstitucional(prev => prev + amount);
+            setArcticFund(prev => prev + (amount * 0.5));
+            setNgoFund(prev => prev + (amount * 0.5));
+        };
+
+        // --- SUBASTA HOLANDESA AUTOMÁTICA ---
+        useEffect(() => {
+            if (auction.active) return;
+            const auctionTimer = setInterval(() => {
+                const seller = terminales[Math.floor(Math.random() * terminales.length)];
+                const baseVol = (Math.random() * 80 + 20).toFixed(2);
+                const premiumPrice = 0.150; 
+                setAuction({ active: true, asset: `Excedente Físico`, vol: baseVol, currentPrice: premiumPrice, currency: 'SOL', seller: seller.id });
+                addLog(`[SUBASTA] ${seller.id} inyecta ${baseVol} kWh a la Malla Global.`);
+            }, 12000); 
+            return () => clearInterval(auctionTimer);
+        }, [auction.active, terminales]);
+
+        useEffect(() => {
+            if (!auction.active) return;
+            const dropTimer = setInterval(() => {
+                setAuction(prev => {
+                    const newPrice = prev.currentPrice * 0.95; 
+                    if (aiPilot && newPrice <= 0.085) {
+                        clearInterval(dropTimer);
+                        handleAIPurchase(prev, newPrice);
+                        return { ...prev, active: false };
+                    }
+                    if(newPrice < 0.04) return { ...prev, active: false }; 
+                    return { ...prev, currentPrice: newPrice };
+                });
+            }, 800);
+            return () => clearInterval(dropTimer);
+        }, [auction.active, aiPilot]);
+
+        const handleAIPurchase = (auc, price) => {
+            const comm = (price * auc.vol) * 0.05; 
+            distributeTaxes(comm);
+            playAlert();
+            addLog(`[TRADE] Aethelgard HFT compró ${auc.vol}kWh a ${price.toFixed(4)} SOL. Tributo extraído.`);
+            setArchiveRecords(ar => [{id: `TX-${Date.now().toString().slice(-4)}`, date: new Date().toLocaleDateString(), desc: `IA Compra ${auc.vol}kWh`, type: "AI-TRADE"}, ...ar]);
+        };
+
+        const handleHumanSnipe = () => {
+            if (!auction.active) return;
+            const finalPrice = auction.currentPrice;
+            const comm = (finalPrice * auction.vol) * 0.05; 
+            distributeTaxes(comm);
+            setAuction(prev => ({ ...prev, active: false }));
+            playSnipe();
+            setSolBalance(p => p + parseFloat(auction.vol));
+            addLog(`[HUMAN SNIPE] Captura manual de ${auction.vol}kWh a ${finalPrice.toFixed(4)} SOL.`);
+            setArchiveRecords(ar => [{id: `TX-${Date.now().toString().slice(-4)}`, date: new Date().toLocaleDateString(), desc: `Snipe Manual ${auction.vol}kWh`, type: "HUMAN-SNIPE"}, ...ar]);
+        };
+
+        // --- NEGOCIACIÓN CHAT IA CON ENTIDADES REALES ---
+        const runNegotiation = () => {
+            if (isNegotiating) return;
+            setIsNegotiating(true);
+            setChat([]);
+            addChat("AETHELGARD CORE", `Iniciando subasta institucional por ${emsData.surplus.toFixed(2)} kWh excedentes. Precio base: 0.092 SOL/kWh.`, "text-g");
+            
+            setTimeout(() => {
+                addChat("ARCTIC-SEC", "Arctic Securities interesada en adquirir bonos verdes. Ofrecemos 0.075 SOL/kWh para portafolio ESG.", "text-arctic");
+                setTimeout(() => {
+                    addChat("POWR-SOL", "Powerledger Oracle valida la transacción de energía limpia. Certificado garantizado.", "text-g");
+                    setTimeout(() => {
+                        addChat("AETHELGARD CORE", "Validación exitosa. Liquidando a 0.075 SOL/kWh + 5% Tributo Pilares.", "text-c");
+                        distributeTaxes(emsData.surplus * 0.075 * 0.05);
+                        setSolBalance(b => b + (emsData.surplus * 0.075));
+                        addLog("[TRADE] Negociación institucional finalizada con ARCTIC-SEC y POWR-SOL.");
+                        setIsNegotiating(false);
+                    }, 2500);
+                }, 2500);
+            }, 2500);
+        };
+
+        // --- SOBERANÍA ---
+        const toggleCompliance = (id) => {
+            setTerminales(prev => prev.map(a => a.id === id ? {...a, status: a.status === 'Active' ? 'Restricted' : 'Active', compliance: a.status === 'Active' ? 40 : 100} : a));
+            addLog(`[LEGAL] Estatus de Terminal ${id} modificado en la Bóveda Matriz.`);
+        };
+
+        const buyTerminal = (agent) => {
+            if (solBalance < agent.cost) return alert("Liquidez Insuficiente en SOL.");
+            setSolBalance(v => v - agent.cost);
+            setTerminales(prev => prev.map(a => a.id === agent.id ? {...a, owned: true, color: "#f5d142"} : a));
+            addLog(`[SOBERANÍA] Terminal ${agent.id} asimilada exitosamente.`);
+        };
+
+        // --- CHARTS ---
+        const chartRef = useRef(null);
+        const chartInst = useRef(null);
+        useEffect(() => {
+            if (activeTab === 'dashboard' && chartRef.current) {
+                const ctx = chartRef.current.getContext('2d');
+                if (chartInst.current) chartInst.current.destroy();
+                chartInst.current = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: Array(20).fill(''), datasets: [{ data: wealthHistory, borderColor: '#00f2ff', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(0, 242, 255, 0.05)', tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { display: false } }, plugins: { legend: { display: false } } }
+                });
+            }
+        }, [activeTab, wealthHistory]);
+
+        return (
+            <div className="min-h-screen flex flex-col">
+                <div className="ticker-wrap">
+                    <div className="ticker font-mono uppercase tracking-widest">
+                        AETHELGARD REAL-WORLD EDITION • CEO: {CEO_NAME.toUpperCase()} • EQUITY: {calculateWealth().toFixed(2)} SOL-EQ • FONDOS ONG & ÁRTICO (5%): {reservaInstitucional.toFixed(4)} SOL • POWERLEDGER ORACLE: ACTIVE
+                    </div>
+                </div>
+
+                <header className="px-8 py-5 bg-s1 border-b border-white/5 flex flex-col md:flex-row justify-between items-center z-50 gap-4">
+                    <div className="flex flex-col md:flex-row items-center gap-4">
+                        <div className="font-display text-3xl font-black text-white italic tracking-widest neon-text">AETHELGARD</div>
+                        <div className="hidden md:block h-6 w-[1px] bg-white/20"></div>
+                        <div className="text-[10px] font-mono text-tx uppercase tracking-widest italic">{CEO_NAME}</div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-all border ${aiPilot ? 'bg-g/10 text-g border-g/30' : 'bg-white/5 text-tx border-white/10'}`} onClick={() => {setAiPilot(!aiPilot); playTone(600, 'sine', 0.1);}}>
+                            <div className={`w-2 h-2 rounded-full ${aiPilot ? 'bg-g animate-ping' : 'bg-tx'}`}></div>
+                            <span className="text-[9px] font-bold uppercase tracking-widest">IA Auto-Pilot: {aiPilot ? 'ACTIVE' : 'OFF'}</span>
+                        </div>
+                        <div className="bg-s2 p-2 px-4 rounded border border-white/10 font-mono text-[10px] text-white">
+                             {DESTINATION_WALLET.slice(0,10)}...
+                        </div>
+                    </div>
+                </header>
+
+                <nav className="flex flex-wrap justify-center gap-x-6 gap-y-3 py-4 bg-s2 border-b border-white/5 px-4 shadow-xl">
+                    {['dashboard', 'malla', 'finanzas', 'hardware', 'filantropia', 'boveda'].map(t => (
+                        <button key={t} onClick={() => {setActiveTab(t); playTone(400, 'sine', 0.05);}} className={`font-mono text-[10px] uppercase tracking-widest transition-all ${activeTab === t ? (t==='filantropia'?'text-arctic border-b border-arctic':'text-c border-b border-c') : 'text-tx hover:text-white'}`}>
+                            {t === 'malla' ? 'MALLA GLOBAL' : t === 'filantropia' ? 'PACTO ONG' : t === 'boveda' ? 'BÓVEDA' : t === 'hardware' ? 'API HARDWARE' : t}
+                        </button>
+                    ))}
+                </nav>
+
+                <main className="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar">
+                    
+                    {/* DASHBOARD */}
+                    <div className={`tab-content ${activeTab === 'dashboard' ? 'active' : ''}`}>
+                        
+                        <div className="mb-8 p-[1px] rounded-xl bg-gradient-to-r from-r via-p to-c">
+                            <div className="bg-s2 p-6 rounded-xl flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-display font-bold text-white mb-1">SUBASTA HOLANDESA EN VIVO <span className="animate-pulse text-r font-mono text-xs ml-2">● REC</span></h3>
+                                    <p className="text-xs font-mono text-tx">Arbitrando excedentes contra el Oráculo Powerledger y la Malla Global.</p>
+                                </div>
+                                {auction.active ? (
+                                    <div className="flex flex-col md:flex-row gap-8 items-center w-full md:w-auto">
+                                        <div className="text-center">
+                                            <div className="text-[10px] text-tx uppercase font-mono">Terminal Vendedora</div>
+                                            <div className="text-white font-bold">{auction.seller}</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-[10px] text-tx uppercase font-mono">Volumen</div>
+                                            <div className="text-c font-bold text-xl">{auction.vol} kWh</div>
+                                        </div>
+                                        <div className="text-center bg-s1 p-3 rounded border border-r/50">
+                                            <div className="text-[10px] text-r uppercase font-mono animate-pulse">Precio (Cayendo)</div>
+                                            <div className="text-w font-bold text-2xl">{auction.currentPrice.toFixed(4)} <span className="text-sm text-sol">SOL</span></div>
+                                        </div>
+                                        <button onClick={handleHumanSnipe} className="px-8 py-4 btn-snipe rounded-lg font-mono tracking-widest text-xs">SNIPE MANUAL</button>
+                                    </div>
+                                ) : <div className="text-tx font-mono text-sm italic animate-pulse">Esperando inyección de excedente en la Malla...</div>}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            <div className="lg:col-span-2 glass p-8 border-l-2 border-c bg-gradient-to-br from-c/5 to-transparent">
+                                <h3 className="text-white font-display text-xl font-bold uppercase mb-4 italic tracking-widest">Equity Growth Nucleus</h3>
+                                <div className="h-44 w-full mb-6"><canvas ref={chartRef}></canvas></div>
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-[9px] text-tx uppercase font-mono">Patrimonio Consolidado</p>
+                                        <p className="text-4xl font-black text-white font-mono">{calculateWealth().toFixed(4)} <span className="text-sm text-c font-light tracking-tighter">SOL-EQ</span></p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] text-arctic font-mono uppercase mb-1">Fondo ONG & Ártico (5%)</div>
+                                        <div className="text-arctic font-bold font-mono text-xl">{reservaInstitucional.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="glass p-8 flex flex-col justify-between border-r-2 border-sol bg-s1">
+                                <div className="space-y-6">
+                                    <div>
+                                        <p className="text-[10px] text-tx uppercase font-mono mb-1">Liquidez Operativa Terrestre</p>
+                                        <p className="text-2xl font-black text-white font-mono">{solBalance.toFixed(2)} <span className="text-xs text-sol">SOL</span></p>
+                                    </div>
+                                    <div className="log-container custom-scrollbar">
+                                        {logs.map((l, i) => <div key={i} className="mb-1">{l}</div>)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MALLA GLOBAL (Mapa, Chat, Asimilación Real) */}
+                    <div className={`tab-content ${activeTab === 'malla' ? 'active' : ''}`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <div className="glass p-6">
+                                <div className="flex justify-between items-center mb-4"><h3 className="font-display text-xl text-white tracking-widest uppercase">Malla DePIN Activa</h3></div>
+                                <div id="global-map"></div>
+                            </div>
+                            <div className="glass p-6 flex flex-col border-r border-arctic/30">
+                                <h2 className="font-display text-xl text-white mb-4 uppercase tracking-widest">Brokerage Institucional</h2>
+                                <div className="chat-box custom-scrollbar mb-4 flex-1 bg-s1/50 border-arctic/10">
+                                    {chat.map((m, i) => (
+                                        <div key={i} className="mb-3">
+                                            <span className={`font-bold ${m.color}`}>[{m.sender}]</span>
+                                            <p className="text-white opacity-80 text-[11px] mt-1">{m.msg}</p>
+                                        </div>
+                                    ))}
+                                    {isNegotiating && <div className="text-g animate-pulse text-[10px] font-mono mt-2">ORÁCULO VALIDANDO...</div>}
+                                </div>
+                                <button onClick={runNegotiation} className="btn-arctic w-full py-4 text-xs font-black uppercase tracking-widest">EJECUTAR SUBASTA INSTITUCIONAL</button>
+                            </div>
+                        </div>
+
+                        <div className="glass p-8">
+                            <h2 className="text-xl font-bold text-white mb-6 uppercase italic border-b border-white/5 pb-2">Soberanía de Nodos Físicos</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {terminales.map(a => (
+                                    <div key={a.id} className={`p-6 border rounded-xl bg-s1 ${a.owned ? 'border-gd' : 'border-white/10'}`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h4 className="font-bold text-white text-sm">{a.name}</h4>
+                                            <span className={`text-[9px] font-bold px-2 py-1 rounded ${a.status==='Active'?'bg-g/10 text-g':'bg-r/10 text-r'}`}>{a.status}</span>
+                                        </div>
+                                        <p className="text-[10px] font-mono text-tx mb-4">Compliance: {a.compliance}%</p>
+                                        
+                                        {!a.owned ? (
+                                            <div className="space-y-3">
+                                                <div className="text-lg font-mono text-gd">{a.cost} SOL</div>
+                                                <button onClick={() => buyTerminal(a)} className="btn-invasion w-full">ASIMILAR TERMINAL</button>
+                                                <button onClick={() => toggleCompliance(a.id)} className="w-full py-2 text-[9px] border border-tx text-tx hover:text-white rounded">MODIFICAR ACCESO</button>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gd text-[10px] font-bold uppercase p-3 bg-gd/10 rounded text-center">Bajo Control Matriz</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* FINANZAS */}
+                    <div className={`tab-content ${activeTab === 'finanzas' ? 'active' : ''}`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <div className="glass p-10 text-center reactor-core">
+                                <h2 className="text-white font-display text-2xl font-black mb-6 uppercase">Generación Yield (GLW)</h2>
+                                <div className="bg-s1 p-6 rounded-xl border border-white/5 mb-6">
+                                    <p className="text-[11px] text-tx uppercase font-mono mb-2">Earnings Acumulados</p>
+                                    <p className="text-4xl font-mono text-g font-bold">+{yieldAcc.toFixed(6)}</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => {if(glwBalance >= 200){setStakedGlw(p=>p+200); setGlwBalance(p=>p-200); playTone(1000,'sine',0.2);}}} className="flex-1 py-3 bg-glw text-black font-bold rounded text-[10px] uppercase">Stake +200 GLW</button>
+                                    <button onClick={() => {setGlwBalance(p=>p+yieldAcc); setYieldAcc(0); playTone(1200,'sine',0.2);}} className="flex-1 py-3 border border-g text-g font-bold rounded text-[10px] uppercase hover:bg-g hover:text-black transition-all">Harvest</button>
+                                </div>
+                            </div>
+                            <div className="glass p-10 border-l-2 border-p bg-s1">
+                                <h2 className="text-white font-display text-2xl font-black uppercase mb-6">Lending Nexus</h2>
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex justify-between border-b border-white/5 pb-2"><span className="text-[10px] text-tx uppercase font-mono">Collateral</span><span className="text-lg text-p font-bold font-mono">{collateral} GLW</span></div>
+                                    <div className="flex justify-between border-b border-white/5 pb-2"><span className="text-[10px] text-tx uppercase font-mono">Credit Debt</span><span className="text-lg text-sol font-bold font-mono">{debt.toFixed(2)} SOL</span></div>
+                                </div>
+                                <button onClick={() => {if(glwBalance >= 500){setGlwBalance(p=>p-500); setCollateral(c=>c+500); setDebt(d=>d+3.8); playTone(600,'square',0.3);}}} className="w-full py-4 bg-gradient-to-r from-p to-sol text-black font-black uppercase text-xs rounded">Abrir Línea Crédito (500 GLW)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* HARDWARE API (POWERLEDGER INTEGRATION) */}
+                    <div className={`tab-content ${activeTab === 'hardware' ? 'active' : ''}`}>
+                        <div className="max-w-4xl mx-auto glass p-10 border-t-2 border-g">
+                            <h3 className="font-display text-3xl text-white mb-2 border-b border-white/5 pb-4">Conexión Oráculo DePIN</h3>
+                            <p className="text-xs font-mono text-tx mb-8">Vincule su hardware de generación eléctrica a la red Solana mediante el oráculo de Powerledger y la red de transmisión Helium.</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                <div className="bg-s1 p-6 rounded-xl border border-white/5">
+                                    <h4 className="text-[10px] text-g uppercase mb-4 font-bold tracking-widest flex items-center justify-between">Telemetría en Vivo <span className="w-2 h-2 bg-g rounded-full animate-pulse"></span></h4>
+                                    <div className="space-y-4 text-sm font-mono">
+                                        <div className="flex justify-between"><span>Consumo Local:</span> <span className="text-white">{emsData.cons} kWh</span></div>
+                                        <div className="flex justify-between"><span>Generación (Panel):</span> <span className="text-g">{emsData.gen} kWh</span></div>
+                                        <div className="flex justify-between border-t border-white/10 pt-4 mt-2"><span>Excedente a Malla:</span> <span className="text-c font-bold">{emsData.surplus} kWh</span></div>
+                                    </div>
+                                </div>
+                                <div className="bg-black p-6 rounded border border-white/10 flex flex-col justify-center gap-4">
+                                    <input type="text" placeholder="https://api.powerledger.io/v1/telemetry" className="w-full p-3 bg-s1 text-white text-xs font-mono border border-white/10 rounded outline-none focus:border-c" />
+                                    <input type="password" placeholder="Token DePIN (Helium/Solana Auth)" className="w-full p-3 bg-s1 text-white text-xs font-mono border border-white/10 rounded outline-none focus:border-c" />
+                                    <button onClick={() => {playTone(600,'sine',0.2); addLog("Oráculo Powerledger Conectado Exitosamente.");}} className="btn-quantum w-full py-4 tracking-widest">INICIAR TRANSMISIÓN DE DATOS</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* PACTO ONG & ÁRTICO */}
+                    <div className={`tab-content ${activeTab === 'filantropia' ? 'active' : ''}`}>
+                        <div className="max-w-5xl mx-auto glass p-10 border-t-4 border-arctic bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-s1 via-s2 to-s3">
+                            <h3 className="font-display text-4xl text-white mb-2 arctic-text uppercase italic tracking-widest text-center">Pacto Filantrópico de los 5 Pilares</h3>
+                            <p className="text-sm font-mono text-tx mb-10 text-center">El 5% de las transacciones de la Arquitectura se consigna directamente mediante Smart Contracts a entidades de impacto, garantizando trazabilidad total.</p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="bg-s1 p-8 rounded-xl border border-arctic/30 shadow-[0_0_20px_rgba(160,232,255,0.05)]">
+                                    <h4 className="text-xl font-bold font-display text-arctic mb-2 uppercase tracking-widest">Conservación del Ártico</h4>
+                                    <p className="text-[10px] font-mono text-tx mb-6">Protección de glaciares y preservación de ecosistemas.</p>
+                                    <div className="text-3xl font-mono text-white font-black mb-6">{arcticFund.toFixed(4)} <span className="text-sm text-arctic font-light">SOL-EQ</span></div>
+                                    <button onClick={() => {playTone(1000,'sine',0.4); alert("Smart Contract Ejecutado: Fondos transferidos."); setArcticFund(0);}} className="w-full py-4 btn-arctic rounded text-xs tracking-widest uppercase">Consignar a Billetera Pública</button>
+                                </div>
+
+                                <div className="bg-s1 p-8 rounded-xl border border-g/30 shadow-[0_0_20px_rgba(0,255,157,0.05)]">
+                                    <h4 className="text-xl font-bold font-display text-g mb-2 uppercase tracking-widest">Servicios Sociales ONG</h4>
+                                    <p className="text-[10px] font-mono text-tx mb-6">Asistencia humanitaria y desarrollo sostenible local.</p>
+                                    <div className="text-3xl font-mono text-white font-black mb-6">{ngoFund.toFixed(4)} <span className="text-sm text-g font-light">SOL-EQ</span></div>
+                                    <button onClick={() => {playTone(800,'sine',0.4); alert("Smart Contract Ejecutado: Fondos transferidos."); setNgoFund(0);}} className="w-full py-4 bg-g text-black rounded font-bold tracking-widest uppercase text-xs hover:brightness-110">Consignar a ONGs Aliadas</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BÓVEDA & ARCHIVE */}
+                    <div className={`tab-content ${activeTab === 'boveda' ? 'active' : ''}`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="glass p-10 border-l-4 border-gd text-center">
+                                <h3 className="font-display text-3xl text-white mb-6 uppercase">Bóveda Matriz</h3>
+                                <div className="text-[10px] text-tx font-mono mb-6 bg-s1 p-4 rounded break-all border border-white/5">RECIPIENT: {DESTINATION_WALLET}</div>
+                                <div className="flex justify-between items-center bg-black p-6 rounded border border-white/10 mb-8">
+                                    <span className="text-tx text-xs uppercase tracking-widest">Total Operativo</span>
+                                    <span className="text-gd font-mono text-2xl font-bold">{solBalance.toFixed(2)} SOL</span>
+                                </div>
+                                <button className="w-full py-5 bg-gd text-black font-black uppercase tracking-[0.3em] rounded">Firmar Transacción Matriz</button>
+                            </div>
+                            
+                            <div className="glass p-8 bg-s1">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-display text-2xl text-white uppercase italic">Cámara de Auditoría</h3>
+                                    <button className="px-4 py-2 border border-tx text-tx text-[9px] rounded uppercase hover:text-white">Exportar (.TXT)</button>
+                                </div>
+                                <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                    {archiveRecords.map((rec, i) => (
+                                        <div key={i} className="p-3 bg-white/5 rounded border border-white/10 flex flex-col gap-1 font-mono text-[10px]">
+                                            <div className="flex justify-between">
+                                                <span className="text-tx">{rec.date}</span>
+                                                <span className="text-gd font-bold">{rec.id}</span>
+                                            </div>
+                                            <span className="text-white">{rec.desc}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </main>
+
+                <footer className="px-8 py-4 bg-s1 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[9px] font-mono tracking-widest uppercase text-tx gap-4 z-50">
+                    <div>AETHELGARD REAL-WORLD v83.0 © 2026 | CEO: <span className="text-white font-bold">{CEO_NAME}</span></div>
+                    <div className="flex gap-6 items-center">
+                        <span className="flex items-center gap-2 text-arctic"><span className="w-1.5 h-1.5 bg-arctic rounded-full shadow-[0_0_8px_#a0e8ff]"></span> NGO PACT ACTIVE</span>
+                        <span className="flex items-center gap-2 text-g"><span className="w-1.5 h-1.5 bg-g rounded-full animate-ping"></span> SYSTEM SECURE</span>
+                    </div>
+                </footer>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+
+</body>
+</html>
