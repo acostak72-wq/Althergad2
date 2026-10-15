@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/broadcast-load-signal",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
