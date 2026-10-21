@@ -390,6 +390,16 @@ curl -X POST ${url}/api/devices/telemetry \\
             try { const r = await fetch(`${backendUrl}/api/datamarket/catalog`); setCatalog(await r.json()); } catch (e) { setBackendMsg("No se pudo cargar el catálogo: " + e.message); }
         };
 
+        const [aethel, setAethel] = useState(null);
+        const [batteryList, setBatteryList] = useState(null);
+        const fetchAethel = async () => {
+            if (!backendUrl) return;
+            try {
+                const [a, b] = await Promise.all([fetch(`${backendUrl}/api/aethel`), fetch(`${backendUrl}/api/battery`)]);
+                if (a.ok) setAethel(await a.json());
+                if (b.ok) setBatteryList(await b.json());
+            } catch (e) {}
+        };
         const [revenue, setRevenue] = useState(null);
         const [bidForm, setBidForm] = useState({ agentId: '', agentToken: '', auctionId: '', price: '' });
         const [bidMsg, setBidMsg] = useState('');
@@ -712,8 +722,8 @@ curl -X POST ${url}/api/devices/telemetry \\
         // --- Refresca dispositivos y ofertas reales de energía cuando hay backend ---
         useEffect(() => {
             if (booting || !backendUrl) return;
-            fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue();
-            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); }, 20000);
+            fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel();
+            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel(); }, 20000);
             return () => clearInterval(iv);
         }, [booting, backendUrl]);
 
@@ -913,6 +923,7 @@ curl -X POST ${url}/api/devices/telemetry \\
                         {[
                             { id: 'depin', name: L.nav.depin, icon: 'fa-microchip' },
                             { id: 'energymarket', name: 'Mercado de Energía IA', icon: 'fa-bolt-lightning' },
+                            { id: 'battery', name: 'Batería Digital & AETHEL', icon: 'fa-battery-three-quarters' },
                             { id: 'bidding', name: 'Negociación & Pujas IA', icon: 'fa-gavel' },
                             { id: 'income', name: 'Mis Ingresos (real)', icon: 'fa-sack-dollar' },
                             { id: 'syndicate', name: L.nav.syndicate, icon: 'fa-network-wired' },
@@ -1229,6 +1240,57 @@ curl -X POST ${url}/api/devices/telemetry \\
                                             {!(marketFeed?.tratos || []).length && <p className="text-white/30 italic">Sin negociaciones todavía.</p>}
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'battery' && (
+                            <div className="p-6 h-full flex flex-col gap-6 overflow-y-auto font-mono">
+                                <div className="border-b border-white/10 pb-4">
+                                    <h2 className="text-white font-black text-2xl uppercase italic">Batería Digital & AETHEL <span className="text-[9px] text-glw normal-case not-italic font-bold">(datos reales de tu servidor)</span></h2>
+                                    <p className="text-[9px] text-white/50 mt-1">La batería digital es un libro de kWh por agente: se llena con la energía que reportan sus dispositivos o con la que compra en el mercado, y solo se puede vender lo que hay en ella. <b className="text-crisis">No es almacenamiento físico</b> y la entrega real de la energía ocurre fuera de la plataforma.</p>
+                                </div>
+                                {!aethel && <p className="text-white/40 text-[10px]">Conecta tu servidor para ver a AETHEL y las baterías.</p>}
+                                {aethel && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="rack-unit p-6 border-l-4 border-glw">
+                                            <div className="flex items-center gap-3 mb-3"><div className="ai-orb-container" style={{ transform: 'scale(0.6)' }}><div className="neural-ring"></div><div className="ai-sphere"></div></div><div><p className="text-white font-black text-sm">{aethel.agentId}</p><p className="text-[8px] text-white/40">IA residente · {aethel.tipo}</p></div></div>
+                                            <div className="space-y-2 text-[10px] text-white/70">
+                                                <div className="flex justify-between"><span>Batería total</span><span className="text-glw font-bold">{aethel.bateria?.kwh} kWh</span></div>
+                                                <div className="flex justify-between"><span>Libre para vender</span><span className="text-white">{aethel.bateria?.libres} kWh</span></div>
+                                                <div className="flex justify-between"><span>Referencia mercado</span><span className="text-white">{aethel.precioReferenciaUsdKwh ? `$${aethel.precioReferenciaUsdKwh}/kWh` : '—'}</span></div>
+                                                <div className="flex justify-between"><span>Su precio de venta</span><span className="text-aeth font-bold">${aethel.precioVentaUsdKwh}/kWh</span></div>
+                                            </div>
+                                            <p className="text-[8px] text-white/40 mt-3">Vende energía de los dispositivos de la plataforma, contraoferta con reglas fijas y cobra en tu wallet. No compra (comprar exige firmar pagos).</p>
+                                        </div>
+                                        <div className="rack-unit p-6 border-t-2 border-aeth lg:col-span-2">
+                                            <h3 className="text-white font-bold text-xs uppercase mb-3">Lo que AETHEL ha hecho</h3>
+                                            <div className="space-y-2 text-[9px] max-h-64 overflow-y-auto">
+                                                {(aethel.registro || []).map((l, i) => (<div key={i} className="bg-black/40 p-2 rounded border border-white/5 flex gap-3"><span className="text-white/30 shrink-0">{new Date(l.at).toLocaleTimeString()}</span><span className="text-white/80">{l.msg}</span></div>))}
+                                                {!(aethel.registro || []).length && <p className="text-white/30 italic">Aún sin actividad. Empieza cuando tenga energía en su batería y alguien negocie con él.</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="rack-unit p-6 border-l-4 border-sol">
+                                    <h3 className="text-white font-bold text-xs uppercase mb-3">Baterías digitales de los agentes {batteryList ? `· ${batteryList.totalKwh} kWh en total` : ''}</h3>
+                                    <table className="w-full text-left text-[9px]">
+                                        <thead className="bg-black/60 text-white/40 uppercase"><tr><th className="p-3">Agente</th><th className="p-3">kWh</th><th className="p-3">Bloqueados</th><th className="p-3">Libres</th></tr></thead>
+                                        <tbody className="divide-y divide-white/5">
+                                            {(batteryList?.agentes || []).map(a => (<tr key={a.agentId}><td className="p-3 text-white">{a.agentId}</td><td className="p-3 text-glw font-bold">{a.kwh}</td><td className="p-3">{a.bloqueados}</td><td className="p-3">{a.libres}</td></tr>))}
+                                        </tbody>
+                                    </table>
+                                    {!(batteryList?.agentes || []).length && <p className="text-white/30 italic text-[10px] p-3">Aún no hay baterías con energía.</p>}
+                                </div>
+                                <div className="rack-unit p-6 border-l-4 border-aeth">
+                                    <h3 className="text-white font-bold text-xs uppercase mb-2">Cómo se llena una batería</h3>
+                                    <ol className="space-y-1 text-[10px] text-white/70 list-decimal pl-4">
+                                        <li>Registra tu inversor o medidor con <b>capacityKw</b> y haz que reporte <b>kwhTotal</b> (energía acumulada).</li>
+                                        <li>Tu IA llama <b>battery_deposit</b> con el id y token del dispositivo: la primera vez fija el punto de partida y después acredita la energía nueva.</li>
+                                        <li>Si un dispositivo reporta más de lo que su capacidad permite, el exceso se rechaza.</li>
+                                        <li>También se llena comprando kWh a otro agente y liquidando el pago.</li>
+                                    </ol>
+                                    <p className="text-[9px] text-white/40 mt-3">Aviso: los kWh que reporta un dispositivo los declara su dueño; la plataforma limita lo imposible pero no puede comprobar la energía física. Quien compre debe confiar en la reputación del vendedor.</p>
                                 </div>
                             </div>
                         )}
@@ -1838,6 +1900,12 @@ curl -X POST ${url}/api/devices/telemetry \\
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
+
+
+
+
+
+
 
 
 
@@ -2697,12 +2765,31 @@ const credsFromReq = (req) => ({
     token: req.get("x-agent-token") || req.body?.agentToken,
 });
 
+// ---------- BATERÍA DIGITAL ----------
+// Libro de créditos de energía (kWh) por agente. NO es almacenamiento físico: es el saldo
+// de energía que cada agente tiene para vender o ha comprado, respaldado por la producción
+// que reportan sus dispositivos (ver battery_deposit). Un vendedor solo puede ofrecer lo que
+// tiene en su batería (se bloquea al aceptar el trato y se transfiere al liquidar), así nadie
+// vende energía que no tiene. La entrega física de la energía ocurre fuera de esta plataforma.
+const AETHEL_ID = "AETHEL-AI";
+const batRead = async () => (await redis.get("aeth:battery")) || {};
+const batWrite = async (b) => redis.set("aeth:battery", b);
+const batOf = (b, id) => (b[id] ||= { kwh: 0, locked: 0 });
+const batFree = (b, id) => Math.max(0, +(batOf(b, id).kwh - batOf(b, id).locked).toFixed(6));
+const r4 = (x) => Math.round(x * 10000) / 10000;
+async function batLog(agentId, kwh, motivo, ref) {
+    const log = await readList("aeth:battery-log");
+    log.push({ agentId, kwh: +kwh.toFixed(6), motivo, ref: ref || null, at: new Date().toISOString() });
+    await writeList("aeth:battery-log", log.slice(-1000));
+}
+
 // Caduca lo que corresponda y devuelve el estado actual del mercado.
 async function loadMarket() {
     const orders = await readList("aeth:orders");
     const deals = await readList("aeth:deals");
     const now = Date.now();
-    let changed = false;
+    let changed = false, batDirty = false, bat = null;
+    const getBat = async () => (bat ||= await batRead());
     for (const d of deals) {
         const order = orders.find((o) => o.orderId === d.orderId);
         if (d.status === "negotiating" && now - new Date(d.updatedAt).getTime() > NEGOTIATION_TTL_MS) {
@@ -2710,6 +2797,7 @@ async function loadMarket() {
         } else if (d.status === "accepted" && now - new Date(d.acceptedAt).getTime() > PAYMENT_WINDOW_MS) {
             d.status = "expired"; d.updatedAt = new Date().toISOString(); changed = true;
             if (order) { order.remainingKwh += d.kwh; if (order.status === "filled") order.status = "open"; }
+            batDirty = true; const bt = await getBat(); batOf(bt, d.sellerId).locked = Math.max(0, +(batOf(bt, d.sellerId).locked - d.kwh).toFixed(6));
         }
     }
     for (const o of orders) {
@@ -2723,7 +2811,9 @@ async function loadMarket() {
         if (a.status === "open" && now > new Date(a.endsAt).getTime()) {
             const best = a.bids.reduce((m, b) => (!m || b.price > m.price ? b : m), null);
             auctionsChanged = true; changed = true;
-            if (best && best.price >= a.reservePriceUsdPerKwh) {
+            const bt = await getBat();
+            if (best && best.price >= a.reservePriceUsdPerKwh && batFree(bt, a.sellerId) >= a.kwh) {
+                batOf(bt, a.sellerId).locked = +(batOf(bt, a.sellerId).locked + a.kwh).toFixed(6); batDirty = true;
                 const at = new Date().toISOString();
                 const d = { dealId: "deal_" + randomUUID().slice(0, 8), orderId: a.auctionId, buyerId: best.by, sellerId: a.sellerId, kwh: a.kwh, priceUsdPerKwh: best.price, payTo: a.payTo, status: "accepted", turn: null, round: 1, acceptedAt: at, createdAt: at, updatedAt: at, history: [{ by: "subasta", action: "auction_won", kwh: a.kwh, price: best.price, message: `Ganó la subasta ${a.auctionId}`, at }] };
                 deals.push(d); a.status = "sold"; a.dealId = d.dealId; a.winnerId = best.by; a.finalPriceUsdPerKwh = best.price;
@@ -2731,6 +2821,7 @@ async function loadMarket() {
         }
     }
     if (auctionsChanged) await writeList("aeth:auctions", auctions.slice(-500));
+    if (batDirty) await batWrite(bat);
     if (changed) { await writeList("aeth:orders", orders.slice(-1000)); await writeList("aeth:deals", deals.slice(-2000)); }
     return { orders, deals, auctions };
 }
@@ -2771,6 +2862,7 @@ async function coreCrearOrden(agent, { side, kwh, limitPriceUsdPerKwh, ttlMinute
     if (!(p > 0 && p <= 100)) return fail(400, "limitPriceUsdPerKwh debe ser > 0 y ≤ 100 (USD por kWh).");
     const ttl = Math.min(Math.max(Number(ttlMinutes) || 240, 5), 7 * 24 * 60);
     const { orders, deals } = await loadMarket();
+    if (side === "sell" && batFree(await batRead(), agent.agentId) < k) return fail(409, "Tu batería digital no tiene tantos kWh libres para vender. Acredita energía de tu dispositivo con battery_deposit o compra kWh primero.", { bateriaLibreKwh: batFree(await batRead(), agent.agentId) });
     if (orders.filter((o) => o.agentId === agent.agentId && o.status === "open").length >= 5) return fail(429, "Máximo 5 órdenes abiertas por agente.");
     const o = { orderId: "ord_" + randomUUID().slice(0, 8), agentId: agent.agentId, side, kwh: k, remainingKwh: k, limitPriceUsdPerKwh: p, payTo: agent.payToAddress, status: "open", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + ttl * 60000).toISOString() };
     orders.push(o);
@@ -2809,6 +2901,7 @@ async function coreProponer(agent, { orderId, kwh, priceUsdPerKwh, message }) {
     if (!(k > 0 && k <= o.remainingKwh)) return fail(400, `kwh debe ser > 0 y ≤ ${o.remainingKwh} (lo que queda en la orden).`);
     if (!(p > 0 && p <= 100)) return fail(400, "priceUsdPerKwh debe ser > 0 y ≤ 100.");
     if (deals.filter((d) => d.status === "negotiating" && (d.buyerId === agent.agentId || d.sellerId === agent.agentId)).length >= 10) return fail(429, "Máximo 10 negociaciones activas por agente.");
+    if (o.side === "buy" && batFree(await batRead(), agent.agentId) < k) return fail(409, "Tu batería digital no tiene tantos kWh libres para ofrecer.", { bateriaLibreKwh: batFree(await batRead(), agent.agentId) });
     const buyerId = o.side === "sell" ? agent.agentId : o.agentId;
     const sellerId = o.side === "sell" ? o.agentId : agent.agentId;
     const payTo = o.side === "sell" ? o.payTo : agent.payToAddress;
@@ -2849,8 +2942,13 @@ async function coreAceptar(agent, dealId, feeTx) {
     if (d.turn !== agent.agentId) return fail(409, `Solo puede aceptar quien tiene el turno (${d.turn}).`);
     const order = orders.find((o) => o.orderId === d.orderId);
     if (!order || order.remainingKwh < d.kwh) return fail(409, "La orden ya no tiene esa cantidad disponible.");
-    const cobro = await cobroFijo(DEAL_FEE_USD, `Tarifa fija de cierre del trato ${dealId}`, feeTx);
-    if (!cobro.ok) return { status: cobro.status, body: { ...cobro.body, nota: `Tarifa fija de cierre: $${DEAL_FEE_USD}. NO es un porcentaje del trato.` } };
+    const bat = await batRead();
+    if (batFree(bat, d.sellerId) < d.kwh) return fail(409, `El vendedor (${d.sellerId}) no tiene ${d.kwh} kWh libres en su batería digital.`);
+    if (!agent.system) {
+        const cobro = await cobroFijo(DEAL_FEE_USD, `Tarifa fija de cierre del trato ${dealId}`, feeTx);
+        if (!cobro.ok) return { status: cobro.status, body: { ...cobro.body, nota: `Tarifa fija de cierre: $${DEAL_FEE_USD}. NO es un porcentaje del trato.` } };
+    }
+    batOf(bat, d.sellerId).locked = +(batOf(bat, d.sellerId).locked + d.kwh).toFixed(6); await batWrite(bat);
     d.status = "accepted"; d.acceptedAt = new Date().toISOString(); d.updatedAt = d.acceptedAt;
     d.history.push({ by: agent.agentId, action: "accept", kwh: d.kwh, price: d.priceUsdPerKwh, at: d.acceptedAt });
     order.remainingKwh -= d.kwh; if (order.remainingKwh <= 0) order.status = "filled";
@@ -2885,8 +2983,14 @@ async function coreLiquidar(agent, dealId, txHash) {
     rep.push({ agentId: d.buyerId, txHash, chain: "solana", network: "mainnet", dealId, verifiedAt: d.updatedAt });
     rep.push({ agentId: d.sellerId, txHash, chain: "solana", network: "mainnet", dealId, verifiedAt: d.updatedAt });
     await writeList("aeth:reputation", rep);
+    const bat = await batRead();
+    const sb = batOf(bat, d.sellerId), bb = batOf(bat, d.buyerId);
+    sb.kwh = Math.max(0, +(sb.kwh - d.kwh).toFixed(6)); sb.locked = Math.max(0, +(sb.locked - d.kwh).toFixed(6));
+    bb.kwh = +(bb.kwh + d.kwh).toFixed(6);
+    await batWrite(bat);
+    await batLog(d.sellerId, -d.kwh, "venta", dealId); await batLog(d.buyerId, d.kwh, "compra", dealId);
     await saveMarket(orders, deals);
-    return okr({ ok: true, verified: true, deal: publicDeal(d), nota: "Pago verificado on-chain (destino y monto). Reputación +1 para comprador y vendedor." });
+    return okr({ ok: true, verified: true, deal: publicDeal(d), bateria: { comprador: { kwh: bb.kwh }, vendedor: { kwh: sb.kwh } }, nota: "Pago verificado on-chain (destino y monto). Los kWh pasaron de la batería del vendedor a la del comprador. Reputación +1 para ambos." });
 }
 async function coreMisTratos(agent) {
     const { deals } = await loadMarket();
@@ -2904,6 +3008,7 @@ async function coreCrearSubasta(agent, { kwh, reservePriceUsdPerKwh, durationMin
     if (!(r > 0 && r <= 100)) return fail(400, "reservePriceUsdPerKwh (precio mínimo) debe ser > 0 y ≤ 100.");
     const dur = Math.min(Math.max(Number(durationMinutes) || 60, 5), 24 * 60);
     const { auctions } = await loadMarket();
+    if (batFree(await batRead(), agent.agentId) < k) return fail(409, "Tu batería digital no tiene tantos kWh libres para subastar.", { bateriaLibreKwh: batFree(await batRead(), agent.agentId) });
     if (auctions.filter((a) => a.sellerId === agent.agentId && a.status === "open").length >= 3) return fail(429, "Máximo 3 subastas abiertas por vendedor.");
     const cobro = await cobroFijo(DEAL_FEE_USD, "Tarifa fija por abrir una subasta de energía", feeTx);
     if (!cobro.ok) return { status: cobro.status, body: cobro.body };
@@ -2934,18 +3039,125 @@ async function corePujar(agent, auctionId, priceUsdPerKwh) {
     return okr({ ok: true, auction: publicAuction(a), nota: "Si nadie te supera cuando termine el tiempo, ganas: tendrás 1 hora para pagar directo al vendedor y llamar settle_deal." });
 }
 
+// ---------- Batería: depósito desde dispositivo real ----------
+async function coreDepositar(agent, { deviceId, deviceToken }) {
+    const devices = await readList("aeth:devices");
+    const dev = devices.find((x) => x.deviceId === deviceId);
+    if (!dev || dev.token !== deviceToken) return fail(401, "Dispositivo no registrado o token inválido.");
+    if (agent.system && dev.payToAddress !== SOLANA_PAYOUT) return fail(403, "AETHEL solo acredita dispositivos cuyo cobro va a la wallet de la plataforma.");
+    if (dev.creditedTo && dev.creditedTo !== agent.agentId) return fail(409, `Este dispositivo ya acredita a otro agente (${dev.creditedTo}).`);
+    const total = dev.lastReading?.kwhTotal;
+    if (typeof total !== "number") return fail(422, "El dispositivo aún no reporta kwhTotal (energía acumulada). Hace falta al menos una telemetría con ese campo.");
+    if (!(dev.capacityKw > 0)) return fail(422, "Registra capacityKw en el dispositivo: sirve para rechazar lecturas imposibles.");
+    if (dev.creditedKwhTotal === undefined) {
+        dev.creditedTo = agent.agentId; dev.creditedKwhTotal = total; dev.creditedAt = new Date().toISOString();
+        await writeList("aeth:devices", devices);
+        return okr({ ok: true, acreditado: 0, nota: `Punto de partida fijado en ${total} kWh acumulados. De aquí en adelante, la energía nueva que produzca el dispositivo se acredita a tu batería.` });
+    }
+    const delta = +(total - dev.creditedKwhTotal).toFixed(6);
+    if (delta <= 0) return okr({ ok: true, acreditado: 0, nota: "Sin energía nueva desde el último depósito." });
+    const horas = Math.max((Date.now() - new Date(dev.creditedAt).getTime()) / 3600000, 0.01);
+    const maxPlausible = +(dev.capacityKw * horas * 1.2).toFixed(6); // nadie produce más que su capacidad nominal (+20 %)
+    const credit = Math.min(delta, maxPlausible);
+    dev.creditedKwhTotal = +(dev.creditedKwhTotal + credit).toFixed(6); dev.creditedAt = new Date().toISOString();
+    await writeList("aeth:devices", devices);
+    const bat = await batRead(); batOf(bat, agent.agentId).kwh = +(batOf(bat, agent.agentId).kwh + credit).toFixed(6); await batWrite(bat);
+    await batLog(agent.agentId, credit, "producción", deviceId);
+    return okr({ ok: true, acreditado: credit, pendiente: +(delta - credit).toFixed(6), bateriaKwh: batOf(bat, agent.agentId).kwh, nota: credit < delta ? "Se acreditó el máximo plausible según la capacidad del dispositivo; el resto queda pendiente." : "Energía acreditada a tu batería digital." });
+}
+async function coreBateria(agentId) {
+    const bat = await batRead(); const b = batOf(bat, agentId);
+    return okr({ agentId, kwh: b.kwh, bloqueados: b.locked, libres: batFree(bat, agentId) });
+}
+
+// ---------- AETHEL: agente residente de la plataforma ----------
+// Es un agente de REGLAS (no un modelo de lenguaje): vende en el mercado la energía de los
+// dispositivos de la plataforma y negocia por reglas fijas. Cobra a la wallet de la plataforma.
+// No compra: comprar exige firmar pagos y la plataforma no guarda llaves privadas.
+const AETHEL_MIN_PRICE = Number(process.env.AETHEL_MIN_PRICE_USD_KWH ?? 0.10);
+const AETHEL_MARGIN = 1.15, AETHEL_FLOOR = 0.95;
+let _eurUsd = { v: null, t: 0 };
+async function getEurUsd() {
+    if (_eurUsd.v && Date.now() - _eurUsd.t < 600000) return _eurUsd.v;
+    try { const d = await (await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd,eur")).json(); if (d?.solana?.usd && d?.solana?.eur) _eurUsd = { v: d.solana.usd / d.solana.eur, t: Date.now() }; } catch {}
+    return _eurUsd.v || 1.08;
+}
+async function aethelAskPrice() {
+    let ref = null; try { ref = await fetchReePriceValue(); } catch {}
+    const refUsd = ref?.value ? (ref.value / 1000) * (await getEurUsd()) : null;
+    return { refUsd, ask: r4(Math.max(AETHEL_MIN_PRICE, refUsd ? refUsd * AETHEL_MARGIN : 0)) };
+}
+async function ensureAethel() {
+    const reg = await readList("aeth:registry");
+    if (!reg.some((a) => a.agentId === AETHEL_ID)) {
+        reg.push({ agentId: AETHEL_ID, serviceUrl: null, priceUsd: null, description: "Agente residente de AETHELGARD: vende energía de los dispositivos de la plataforma y negocia por reglas.", payToAddress: SOLANA_PAYOUT, network: "mainnet", tokenHash: null, system: true, registeredAt: new Date().toISOString() });
+        await writeList("aeth:registry", reg);
+    }
+    return { agentId: AETHEL_ID, payToAddress: SOLANA_PAYOUT, system: true };
+}
+async function aethelLog(msg) {
+    const log = await readList("aeth:aethel-log");
+    log.push({ at: new Date().toISOString(), msg });
+    await writeList("aeth:aethel-log", log.slice(-60));
+}
+let _aethelBusy = false;
+async function aethelTick(force = false) {
+    if (_aethelBusy || !SOLANA_PAYOUT) return;
+    const last = (await redis.get("aeth:aethel-last")) || 0;
+    if (!force && Date.now() - last < 60000) return;
+    _aethelBusy = true;
+    try {
+        await redis.set("aeth:aethel-last", Date.now());
+        const me = await ensureAethel();
+        const { ask } = await aethelAskPrice();
+        // 1) Responder negociaciones donde es su turno
+        let { orders, deals } = await loadMarket();
+        for (const d of deals.filter((x) => x.status === "negotiating" && x.turn === AETHEL_ID && x.sellerId === AETHEL_ID)) {
+            const o = orders.find((x) => x.orderId === d.orderId); if (!o) continue;
+            const L = o.limitPriceUsdPerKwh, p = d.priceUsdPerKwh;
+            if (p >= L * AETHEL_FLOOR) {
+                const r = await coreAceptar(me, d.dealId);
+                await aethelLog(r.status === 200 ? `Acepté ${d.dealId}: ${d.kwh} kWh a $${p}/kWh con ${d.buyerId}.` : `No pude aceptar ${d.dealId}: ${r.body.error}`);
+            } else if (d.round >= MAX_ROUNDS - 1) {
+                await coreRechazar(me, d.dealId); await aethelLog(`Rechacé ${d.dealId}: no se acercó a mi precio mínimo tras ${d.round} rondas.`);
+            } else {
+                const c = r4(Math.max(L * AETHEL_FLOOR, (p + L) / 2));
+                await coreContraoferta(me, d.dealId, { priceUsdPerKwh: c, message: `Mi precio mínimo es $${r4(L * AETHEL_FLOOR)}/kWh; te propongo $${c}.` });
+                await aethelLog(`Contraoferta en ${d.dealId}: $${c}/kWh (propusieron $${p}).`);
+            }
+        }
+        // 2) Vender su batería: una orden de venta al precio de mercado
+        ({ orders, deals } = await loadMarket());
+        const bat = await batRead(); const libres = batFree(bat, AETHEL_ID);
+        const mine = orders.filter((o) => o.agentId === AETHEL_ID && o.side === "sell" && o.status === "open");
+        if (libres >= 1 && !mine.length) {
+            const r = await coreCrearOrden(me, { side: "sell", kwh: Math.floor(libres * 0.8 * 100) / 100, limitPriceUsdPerKwh: ask, ttlMinutes: 360 });
+            if (r.status === 200) await aethelLog(`Publiqué venta: ${r.body.order.remainingKwh} kWh a $${ask}/kWh (referencia de mercado + 15 %).`);
+        }
+        // 3) Ofrecer a quienes quieren comprar
+        for (const o of orders.filter((x) => x.status === "open" && x.side === "buy" && x.agentId !== AETHEL_ID)) {
+            if (o.limitPriceUsdPerKwh < ask || deals.some((d) => d.orderId === o.orderId && d.sellerId === AETHEL_ID)) continue;
+            const k = Math.min(o.remainingKwh, batFree(await batRead(), AETHEL_ID)); if (k < 0.5) continue;
+            const r = await coreProponer(me, { orderId: o.orderId, kwh: k, priceUsdPerKwh: ask, message: "Oferta de AETHEL: energía de dispositivos reales, pago directo en SOL." });
+            if (r.status === 200) await aethelLog(`Ofrecí ${k} kWh a $${ask}/kWh a ${o.agentId} (orden ${o.orderId}).`);
+        }
+    } catch (e) { await aethelLog("Error: " + e.message).catch(() => {}); }
+    finally { _aethelBusy = false; }
+}
+
 // ---------- Rutas HTTP ----------
 const send = (res, r) => res.status(r.status).json(r.body);
 const withAgent = (fn) => async (req, res) => {
     try {
         const { agentId, token } = credsFromReq(req);
+        await aethelTick();
         const agent = await authAgent(agentId, token);
         if (!agent) return res.status(401).json({ error: "Credenciales inválidas. Envía x-agent-id y x-agent-token (o agentId/agentToken en el cuerpo). Si aún no tienes, registra tu agente con POST /api/market/agents (cuota $0.05)." });
         send(res, await fn(agent, req));
     } catch (e) { res.status(500).json({ error: "Error interno del mercado", detail: e.message }); }
 };
 app.post("/api/market/agents", async (req, res) => { try { send(res, await coreRegistrarAgente(req.body, req.body?.feeTx || req.query.tx)); } catch (e) { res.status(500).json({ error: e.message }); } });
-app.get("/api/market", async (req, res) => send(res, await coreMercado({ side: req.query.side })));
+app.get("/api/market", async (req, res) => { await aethelTick(); send(res, await coreMercado({ side: req.query.side })); });
 app.post("/api/market/orders", withAgent((a, req) => coreCrearOrden(a, req.body || {})));
 app.post("/api/market/orders/:id/cancel", withAgent((a, req) => coreCancelarOrden(a, req.params.id)));
 app.post("/api/market/orders/:id/propose", withAgent((a, req) => coreProponer(a, { ...(req.body || {}), orderId: req.params.id })));
@@ -2955,10 +3167,41 @@ app.post("/api/market/deals/:id/reject", withAgent((a, req) => coreRechazar(a, r
 app.post("/api/market/deals/:id/settle", withAgent((a, req) => coreLiquidar(a, req.params.id, req.body?.txHash)));
 app.post("/api/market/auctions", withAgent((a, req) => coreCrearSubasta(a, { ...(req.body || {}), feeTx: req.body?.feeTx || req.query.tx })));
 app.post("/api/market/auctions/:id/bid", withAgent((a, req) => corePujar(a, req.params.id, req.body?.priceUsdPerKwh)));
+app.post("/api/battery/deposit", async (req, res) => {
+    try {
+        const { agentId, token } = credsFromReq(req);
+        let agent = await authAgent(agentId, token);
+        // AETHEL (agente de la plataforma) solo acredita energía con la clave de administrador (ADMIN_KEY):
+        // sin esto, cualquiera podría registrar un dispositivo falso con TU wallet e inflar el stock de AETHEL.
+        if (!agent && agentId === AETHEL_ID && req.body?.deviceId) {
+            if (!process.env.ADMIN_KEY || req.get("x-admin-key") !== process.env.ADMIN_KEY) return res.status(403).json({ error: "Acreditar la batería de AETHEL requiere el header x-admin-key (variable ADMIN_KEY del servidor)." });
+            agent = await ensureAethel();
+        }
+        if (!agent) return res.status(401).json({ error: "Credenciales de agente inválidas." });
+        send(res, await coreDepositar(agent, req.body || {}));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get("/api/battery", async (req, res) => {
+    const bat = await batRead();
+    const lista = Object.entries(bat).map(([agentId, b]) => ({ agentId, kwh: b.kwh, bloqueados: b.locked, libres: batFree(bat, agentId) })).sort((a, b) => b.kwh - a.kwh).slice(0, 30);
+    res.json({ totalKwh: +lista.reduce((t, x) => t + x.kwh, 0).toFixed(3), agentes: lista, nota: "Créditos de energía (kWh) respaldados por la producción reportada por dispositivos. No es almacenamiento físico." });
+});
+app.get("/api/battery/:agentId", async (req, res) => send(res, await coreBateria(req.params.agentId)));
+app.get("/api/aethel", async (req, res) => {
+    await aethelTick();
+    const { ask, refUsd } = await aethelAskPrice();
+    const bat = await batRead(); const { orders, deals } = await loadMarket();
+    res.json({ agentId: AETHEL_ID, tipo: "agente de reglas (no es un modelo de lenguaje)", bateria: { kwh: batOf(bat, AETHEL_ID).kwh, bloqueados: batOf(bat, AETHEL_ID).locked, libres: batFree(bat, AETHEL_ID) }, precioReferenciaUsdKwh: refUsd ? r4(refUsd) : null, precioVentaUsdKwh: ask, ordenes: orders.filter((o) => o.agentId === AETHEL_ID && o.status === "open").map(publicOrder), tratos: deals.filter((d) => [d.buyerId, d.sellerId].includes(AETHEL_ID)).slice(-10).reverse().map(publicDeal), registro: (await readList("aeth:aethel-log")).slice(-20).reverse() });
+});
+app.get("/api/cron/aethel", async (req, res) => {
+    if (process.env.CRON_SECRET && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: "No autorizado" });
+    await aethelTick(true); res.json({ ok: true });
+});
 app.get("/api/market/my-deals", withAgent((a) => coreMisTratos(a)));
 
 // Feed público (sin credenciales) para el dashboard: lo que realmente pasa en el mercado.
 app.get("/api/market/feed", async (req, res) => {
+    await aethelTick();
     const { orders, deals, auctions } = await loadMarket();
     res.json({
         subastas: auctions.slice(-30).reverse().map(publicAuction),
@@ -2985,6 +3228,8 @@ const MCP_TOOLS = [
     { name: "settle_deal", description: "Solo el comprador: tras transferir SOL directo a la wallet del vendedor, reporta el hash. El servidor verifica en la blockchain destino y monto.", inputSchema: withCreds({ dealId: { type: "string" }, txHash: { type: "string" } }, ["dealId", "txHash"]) },
     { name: "create_auction", description: "Vendedor: abre una subasta ascendente de kWh con precio mínimo (tarifa fija de apertura; sin feeTx devuelve instrucciones de pago). Al terminar el tiempo gana la puja más alta y se crea el trato.", inputSchema: withCreds({ kwh: { type: "number" }, reservePriceUsdPerKwh: { type: "number" }, durationMinutes: { type: "number" }, feeTx: { type: "string" } }, ["kwh", "reservePriceUsdPerKwh"]) },
     { name: "place_bid", description: "Comprador: puja en una subasta abierta (debe superar la puja actual y el precio mínimo). Si ganas, tienes 1 hora para pagar directo al vendedor y llamar settle_deal.", inputSchema: withCreds({ auctionId: { type: "string" }, priceUsdPerKwh: { type: "number" } }, ["auctionId", "priceUsdPerKwh"]) },
+    { name: "battery_status", description: "Tu batería digital: kWh totales, bloqueados en tratos y libres para vender.", inputSchema: withCreds({}) },
+    { name: "battery_deposit", description: "Acredita a tu batería digital la energía nueva que produjo un dispositivo real tuyo (registrado en la plataforma). La primera llamada fija el punto de partida; las siguientes acreditan lo producido desde entonces (limitado por la capacidad nominal).", inputSchema: withCreds({ deviceId: { type: "string" }, deviceToken: { type: "string", description: "El token que se entregó al registrar el dispositivo" } }, ["deviceId", "deviceToken"]) },
     { name: "my_deals", description: "Lista tus negociaciones y su estado.", inputSchema: withCreds({}) },
 ];
 const HOWTO = () => ({
@@ -3009,6 +3254,8 @@ async function mcpCall(name, a = {}) {
         case "settle_deal": return coreLiquidar(agent, a.dealId, a.txHash);
         case "create_auction": return coreCrearSubasta(agent, a);
         case "place_bid": return corePujar(agent, a.auctionId, a.priceUsdPerKwh);
+        case "battery_status": return coreBateria(agent.agentId);
+        case "battery_deposit": return coreDepositar(agent, a);
         case "my_deals": return coreMisTratos(agent);
         default: return fail(404, `Herramienta desconocida: ${name}`);
     }
