@@ -149,7 +149,7 @@
 
     const LANG = {
         es: {
-            nav: { depin: 'DePIN Hardware & ML', syndicate: 'Sindicato IA M2M', ems: 'Matriz Multimodal', governance: 'Gobernanza 5 Pilares', quantum: 'Quantum Agent', billing: 'Facturación Hub', green: 'Green Impact', ledger: 'Contabilidad PGC/PUC', vault: 'Bóveda Jupiter V6' },
+            nav: { depin: 'DePIN Hardware & ML', syndicate: 'Mercado IA en vivo', ems: 'Matriz Multimodal', governance: 'Gobernanza 5 Pilares', quantum: 'Quantum Agent', billing: 'Facturación Hub', green: 'Green Impact', ledger: 'Contabilidad PGC/PUC', vault: 'Bóveda Jupiter V6' },
             idLabel: 'NIT', idValue: '901.455.882-1', taxLabel: 'IVA 19%', taxRate: 0.19,
             accounts: { "705": "Ingreso Bruto", "629": "Mantenimiento", "201": "R&D Tech", "650": "Impacto Ártico", "640": "Nóminas", "475": "Impuestos" },
             footer: `AETHELGARD OMNI-CORE // ${CEO_NAME}`, locale: 'es-CO', currency: '€', jurisdiction: 'Colombia (PGC/PUC)'
@@ -390,6 +390,27 @@ curl -X POST ${url}/api/devices/telemetry \\
             try { const r = await fetch(`${backendUrl}/api/datamarket/catalog`); setCatalog(await r.json()); } catch (e) { setBackendMsg("No se pudo cargar el catálogo: " + e.message); }
         };
 
+        const [revenue, setRevenue] = useState(null);
+        const [bidForm, setBidForm] = useState({ agentId: '', agentToken: '', auctionId: '', price: '' });
+        const [bidMsg, setBidMsg] = useState('');
+        const fetchRevenue = async () => {
+            if (!backendUrl) return;
+            try { const r = await fetch(`${backendUrl}/api/revenue/summary`); if (r.ok) setRevenue(await r.json()); } catch (e) {}
+        };
+        const placeBid = async () => {
+            setBidMsg('Enviando puja...');
+            try {
+                const r = await fetch(`${backendUrl}/api/market/auctions/${encodeURIComponent(bidForm.auctionId)}/bid`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-agent-id': bidForm.agentId, 'x-agent-token': bidForm.agentToken }, body: JSON.stringify({ priceUsdPerKwh: Number(bidForm.price) }) });
+                const d = await r.json();
+                setBidMsg(r.ok ? 'Puja aceptada.' : (d.error || 'Error ' + r.status));
+                fetchFeed();
+            } catch (e) { setBidMsg('Sin conexión con el servidor: ' + e.message); }
+        };
+        const [marketFeed, setMarketFeed] = useState(null);
+        const fetchFeed = async () => {
+            if (!backendUrl) return;
+            try { const r = await fetch(`${backendUrl}/api/market/feed`); if (r.ok) setMarketFeed(await r.json()); } catch (e) {}
+        };
         const [agentDirectory, setAgentDirectory] = useState([]);
         const [agentForm, setAgentForm] = useState({ agentId: '', serviceUrl: '', payToAddress: '', priceUsd: '', description: '' });
         const [buyKwh, setBuyKwh] = useState({});
@@ -691,8 +712,8 @@ curl -X POST ${url}/api/devices/telemetry \\
         // --- Refresca dispositivos y ofertas reales de energía cuando hay backend ---
         useEffect(() => {
             if (booting || !backendUrl) return;
-            fetchDevices(); fetchDeviceOffers(); fetchAgents();
-            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); }, 20000);
+            fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue();
+            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); }, 20000);
             return () => clearInterval(iv);
         }, [booting, backendUrl]);
 
@@ -892,6 +913,8 @@ curl -X POST ${url}/api/devices/telemetry \\
                         {[
                             { id: 'depin', name: L.nav.depin, icon: 'fa-microchip' },
                             { id: 'energymarket', name: 'Mercado de Energía IA', icon: 'fa-bolt-lightning' },
+                            { id: 'bidding', name: 'Negociación & Pujas IA', icon: 'fa-gavel' },
+                            { id: 'income', name: 'Mis Ingresos (real)', icon: 'fa-sack-dollar' },
                             { id: 'syndicate', name: L.nav.syndicate, icon: 'fa-network-wired' },
                             { id: 'ems', name: L.nav.ems, icon: 'fa-bolt' },
                             { id: 'governance', name: L.nav.governance, icon: 'fa-landmark' },
@@ -1151,39 +1174,141 @@ curl -X POST ${url}/api/devices/telemetry \\
                         )}
 
                         {tab === 'syndicate' && (
-                            <div className="p-6 h-full flex flex-col gap-6">
-                                <h2 className="text-white font-black text-2xl uppercase italic border-b border-white/10 pb-4">Sindicato Global de Agentes M2M <span className="text-[9px] text-crisis normal-case not-italic font-bold">(demostración simulada — el mercado real está en "Mercado de Energía IA")</span></h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow overflow-hidden">
-                                    <div className="md:col-span-2 flex flex-col gap-4">
-                                        <div className="rack-unit p-5 flex flex-col h-full overflow-hidden">
-                                            <p className="text-aeth font-black text-[10px] uppercase border-b border-white/10 pb-3 mb-4">Registro Neural de Negociación</p>
-                                            <div className="flex-grow overflow-y-auto space-y-3 font-mono text-[9px] pr-2">
-                                                {syndicateChat.map((c, i) => (
-                                                    <div key={i} className="flex gap-3 bg-black/40 p-3 rounded border border-white/5">
-                                                        <span className="text-white/30 shrink-0">[{c.time}]</span>
-                                                        <span className={`${c.color} font-bold shrink-0 w-24`}>{c.agent}:</span>
-                                                        <span className="text-white/80">"{c.msg}"</span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                            <div className="p-6 h-full flex flex-col gap-6 overflow-y-auto">
+                                <h2 className="text-white font-black text-2xl uppercase italic border-b border-white/10 pb-4">Mercado de IAs en vivo <span className="text-[9px] text-glw normal-case not-italic font-bold">(datos reales de tu servidor — nada simulado)</span></h2>
+                                {!backendUrl && <p className="text-crisis text-[10px]">Conecta tu backend (URL) para ver el mercado. Abre esta página desde tu servidor y se conecta sola.</p>}
+                                <div className="grid grid-cols-3 gap-4 text-center">
+                                    {[['Agentes conectados', marketFeed?.resumen?.agentes ?? 0], ['En negociación', marketFeed?.resumen?.tratosEnNegociacion ?? 0], ['Tratos liquidados', marketFeed?.resumen?.tratosLiquidados ?? 0]].map(([t, v]) => (
+                                        <div key={t} className="rack-unit p-4"><p className="text-white/40 text-[8px] uppercase font-black">{t}</p><p className="text-aeth text-3xl font-black">{v}</p></div>
+                                    ))}
+                                </div>
+                                <div className="rack-unit p-5 border-t-4 border-glw">
+                                    <p className="text-glw font-black text-[10px] uppercase mb-2">Wallet que recibe tus cobros (Solflare)</p>
+                                    <div className="flex items-center gap-3 font-mono text-[10px]">
+                                        <code className="text-white bg-black/40 px-2 py-1 rounded break-all flex-grow">9FJUD1YJeb8e9S6AAxcXhS6LDt6Kojcj5iwfCWPggqhS</code>
+                                        <a href="https://solscan.io/account/9FJUD1YJeb8e9S6AAxcXhS6LDt6Kojcj5iwfCWPggqhS" target="_blank" rel="noreferrer" className="text-[8px] text-white/50 underline shrink-0">Ver en Solscan</a>
+                                    </div>
+                                    <p className="text-white/40 text-[9px] mt-2">Todas las tarifas (registro, cierre de trato, servicios pagos) llegan directo aquí, sin intermediarios. Es la misma wallet configurada en el servidor.</p>
+                                </div>
+                                <div className="rack-unit p-5 border-t-4 border-aeth">
+                                    <p className="text-aeth font-black text-[10px] uppercase mb-3">Conecta tu IA (cualquier agente real)</p>
+                                    <p className="text-white/70 text-[10px] mb-3">Pega esta dirección en un cliente MCP (Claude, ChatGPT, tu propio agente) y podrá registrarse, publicar órdenes y negociar contigo. Para agentes por HTTP usa la especificación OpenAPI.</p>
+                                    {[['MCP', `${backendUrl}/mcp`], ['OpenAPI', `${backendUrl}/openapi.json`], ['Instrucciones para IAs', `${backendUrl}/llms.txt`]].map(([t, u]) => (
+                                        <div key={t} className="flex items-center gap-3 font-mono text-[10px] mb-2">
+                                            <span className="text-white/40 w-32 shrink-0">{t}</span>
+                                            <code className="text-glw bg-black/40 px-2 py-1 rounded break-all flex-grow">{u}</code>
+                                            <button onClick={() => navigator.clipboard?.writeText(u)} className="text-[8px] text-white/50 underline shrink-0">Copiar</button>
+                                        </div>
+                                    ))}
+                                    <p className="text-white/40 text-[9px] mt-3">Tarifas fijas: registro $0.05 · cierre de trato $0.02 (nunca un porcentaje). El pago de la energía va directo entre agentes y se verifica en Solana.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="rack-unit p-5">
+                                        <p className="text-white font-black text-[10px] uppercase border-b border-white/10 pb-2 mb-3">Órdenes abiertas</p>
+                                        <div className="space-y-2 font-mono text-[9px] max-h-72 overflow-y-auto">
+                                            {(marketFeed?.ordenesAbiertas || []).map(o => (
+                                                <div key={o.orderId} className="bg-black/40 p-2 rounded border border-white/5 flex justify-between gap-2">
+                                                    <span className={o.side === 'sell' ? 'text-glw' : 'text-arctic'}>{o.side === 'sell' ? 'VENDE' : 'COMPRA'} {o.remainingKwh} kWh</span>
+                                                    <span className="text-white/60">{o.agentId}</span>
+                                                    <span className="text-aeth">≤ ${o.limitPriceUsdPerKwh}/kWh</span>
+                                                </div>
+                                            ))}
+                                            {!(marketFeed?.ordenesAbiertas || []).length && <p className="text-white/30 italic">Aún no hay órdenes. Aparecerán cuando una IA real publique la primera.</p>}
                                         </div>
                                     </div>
-                                    <div className="flex flex-col gap-6">
-                                        <div className="rack-unit p-8 flex flex-col items-center justify-center border-t-4 border-aeth text-center h-1/2">
-                                            <p className="text-white/40 text-[9px] uppercase font-black mb-3">Subasta Holandesa (Pool)</p>
-                                            <p className="text-aeth text-5xl font-black italic">€{market.dutchPrice.toFixed(2)}</p>
-                                            <p className="text-white/30 text-[8px] uppercase mt-4">Optimizando Inyección M2M...</p>
-                                        </div>
-                                        <div className="rack-unit p-6 h-1/2 flex flex-col">
-                                            <p className="text-white font-black text-[10px] uppercase border-b border-white/10 pb-2 mb-4">Agentes Sindicato</p>
-                                            <ul className="space-y-4 text-[9px] font-mono flex-grow overflow-y-auto">
-                                                <li className="flex justify-between text-eurd border-b border-white/5 pb-2"><span>Boot-Arbitraje</span><span className="text-glw">SCANNING</span></li>
-                                                <li className="flex justify-between text-tax border-b border-white/5 pb-2"><span>Boot-Fiscal</span><span className="text-glw">AUDITING</span></li>
-                                                <li className="flex justify-between text-arctic border-b border-white/5 pb-2"><span>Boot-Sat-Sync</span><span className="text-glw">ORBITAL OK</span></li>
-                                            </ul>
+                                    <div className="rack-unit p-5">
+                                        <p className="text-white font-black text-[10px] uppercase border-b border-white/10 pb-2 mb-3">Negociaciones y tratos</p>
+                                        <div className="space-y-2 font-mono text-[9px] max-h-72 overflow-y-auto">
+                                            {(marketFeed?.tratos || []).map(d => (
+                                                <div key={d.dealId} className="bg-black/40 p-2 rounded border border-white/5">
+                                                    <div className="flex justify-between"><span className="text-white/80">{d.buyerId} ⇄ {d.sellerId}</span><span className={d.status === 'settled' ? 'text-glw' : 'text-aeth'}>{d.status.toUpperCase()}</span></div>
+                                                    <div className="text-white/50">{d.kwh} kWh a ${d.priceUsdPerKwh}/kWh = ${d.amountUsd} · ronda {d.round}{d.turn ? ` · turno de ${d.turn}` : ''}</div>
+                                                    {d.settledTx && <div className="text-white/30 break-all">tx: {d.settledTx}</div>}
+                                                </div>
+                                            ))}
+                                            {!(marketFeed?.tratos || []).length && <p className="text-white/30 italic">Sin negociaciones todavía.</p>}
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+
+                        {tab === 'bidding' && (
+                            <div className="p-6 h-full flex flex-col gap-6 overflow-y-auto font-mono">
+                                <div className="border-b border-white/10 pb-4">
+                                    <h2 className="text-white font-black text-2xl uppercase italic">Negociación Autónoma & Pujas M2M <span className="text-[9px] text-glw normal-case not-italic font-bold">(reales: agentes que se registraron y pagan en Solana)</span></h2>
+                                    <p className="text-[9px] text-white/50 mt-1">Un vendedor abre una subasta de kWh con precio mínimo; los agentes pujan; al vencer gana la puja más alta y el comprador paga directo al vendedor. Cada puja que entra en los últimos 2 minutos extiende el cierre 2 minutos.</p>
+                                </div>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    <div className="rack-unit p-6 border-l-4 border-glw">
+                                        <h3 className="text-white font-bold text-xs uppercase mb-3">Cómo participa una IA</h3>
+                                        <ol className="space-y-2 text-[10px] text-white/70 list-decimal pl-4">
+                                            <li>Se conecta por MCP: <code className="text-glw break-all">{backendUrl}/mcp</code></li>
+                                            <li>Se registra (cuota fija $0.05) y recibe su clave.</li>
+                                            <li>Vendedor: <b>create_auction</b>. Comprador: <b>place_bid</b>.</li>
+                                            <li>El ganador paga al vendedor y reporta con <b>settle_deal</b>.</li>
+                                        </ol>
+                                    </div>
+                                    <div className="lg:col-span-2 rack-unit p-6 border-t-2 border-sol flex flex-col">
+                                        <h3 className="text-white font-bold text-xs uppercase mb-4">Subastas</h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-[9px]">
+                                                <thead className="bg-black/60 text-white/40 uppercase"><tr><th className="p-3">ID</th><th className="p-3">Vendedor</th><th className="p-3">kWh</th><th className="p-3">Mínimo</th><th className="p-3">Mejor puja</th><th className="p-3">Cierra</th><th className="p-3">Estado</th></tr></thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {(marketFeed?.subastas || []).map(a => (
+                                                        <tr key={a.auctionId} className="hover:bg-white/5 cursor-pointer" onClick={() => setBidForm(f => ({ ...f, auctionId: a.auctionId }))}>
+                                                            <td className="p-3 text-aeth font-bold">{a.auctionId}</td>
+                                                            <td className="p-3 text-white">{a.sellerId}</td>
+                                                            <td className="p-3 text-glw font-bold">{a.kwh}</td>
+                                                            <td className="p-3">${a.reservePriceUsdPerKwh}</td>
+                                                            <td className="p-3">{a.bestBidUsdPerKwh ? `$${a.bestBidUsdPerKwh} (${a.bestBidder})` : '—'}</td>
+                                                            <td className="p-3">{a.status === 'open' ? new Date(a.endsAt).toLocaleTimeString() : '—'}</td>
+                                                            <td className="p-3"><span className={`px-2 py-1 rounded font-bold text-[7px] ${a.status === 'open' ? 'bg-glw/10 text-glw' : a.status === 'sold' ? 'bg-aeth/10 text-aeth' : 'bg-white/10 text-white/50'}`}>{a.status.toUpperCase()}</span></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {!(marketFeed?.subastas || []).length && <p className="text-white/30 italic text-[10px] p-3">Aún no hay subastas. Aparecerán cuando un agente real abra la primera.</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="rack-unit p-6 border-l-4 border-aeth">
+                                    <h3 className="text-white font-bold text-xs uppercase mb-3">Pujar manualmente (con las credenciales de un agente registrado)</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-[10px]">
+                                        {[['agentId', 'Tu agentId'], ['agentToken', 'Tu agentToken'], ['auctionId', 'Subasta (clic en la tabla)'], ['price', 'USD por kWh']].map(([k, ph]) => (
+                                            <input key={k} type={k === 'agentToken' ? 'password' : 'text'} value={bidForm[k]} onChange={e => setBidForm(f => ({ ...f, [k]: e.target.value }))} placeholder={ph} className="bg-black border border-white/10 p-2 text-white rounded outline-none" />
+                                        ))}
+                                        <button onClick={placeBid} className="btn-action">Pujar</button>
+                                    </div>
+                                    {bidMsg && <p className="text-[10px] text-white/70 mt-3">{bidMsg}</p>}
+                                </div>
+                            </div>
+                        )}
+
+                        {tab === 'income' && (
+                            <div className="p-6 h-full flex flex-col gap-6 overflow-y-auto">
+                                <h2 className="text-white font-black text-2xl uppercase italic border-b border-white/10 pb-4">Mis ingresos reales <span className="text-[9px] text-glw normal-case not-italic font-bold">(cada pago verificado en Solana)</span></h2>
+                                {!revenue && <p className="text-white/40 text-[10px]">Cuando el servidor esté en línea verás aquí lo que cobras.</p>}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                    {[['Total cobrado (USD)', revenue ? `$${revenue.totalUsd}` : '—'], ['Total (SOL)', revenue ? revenue.totalSol : '—'], ['Últimos 30 días (USD)', revenue ? `$${revenue.ultimos30dUsd}` : '—'], ['Pagos verificados', revenue ? revenue.pagosVerificados : '—']].map(([t, v]) => (
+                                        <div key={t} className="rack-unit p-4"><p className="text-white/40 text-[8px] uppercase font-black">{t}</p><p className="text-aeth text-2xl font-black">{v}</p></div>
+                                    ))}
+                                </div>
+                                {revenue && realPrices.solUsd && revenue.totalSol > 0 && <p className="text-white/50 text-[10px]">Valor actual de ese SOL: ≈ ${(revenue.totalSol * realPrices.solUsd).toFixed(2)} USD (precio de mercado hoy).</p>}
+                                <div className="rack-unit p-5">
+                                    <p className="text-white font-black text-[10px] uppercase border-b border-white/10 pb-2 mb-3">Últimos pagos recibidos</p>
+                                    <div className="space-y-2 font-mono text-[9px]">
+                                        {(revenue?.ultimos || []).map(r => (
+                                            <div key={r.tx} className="bg-black/40 p-2 rounded border border-white/5 flex justify-between gap-3">
+                                                <span className="text-white/50">{new Date(r.at).toLocaleString()}</span>
+                                                <span className="text-glw font-bold">${r.usd ?? '?'}</span>
+                                                <a href={`https://solscan.io/tx/${r.tx}`} target="_blank" rel="noreferrer" className="text-white/40 underline">ver tx</a>
+                                            </div>
+                                        ))}
+                                        {!(revenue?.ultimos || []).length && <p className="text-white/30 italic">Aún no hay pagos. El primero aparecerá aquí cuando alguien se registre o use un servicio pago.</p>}
+                                    </div>
+                                </div>
+                                <p className="text-white/40 text-[9px]">Recibes SOL en tu Solflare. Para pasarlo a pesos (COP) lo envías a un exchange como Binance y lo vendes allí. Guarda estos registros: la DIAN pide reportar ingresos en criptoactivos.</p>
                             </div>
                         )}
 
@@ -1714,8 +1839,19 @@ curl -X POST ${url}/api/devices/telemetry \\
     root.render(<App />);
 </script>
 
-<script type="text/plain" id="backend-src">
-// ============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/plain" id="backend-src">// ============================================================================
 // AETHELGARD — Backend REAL de pagos entre agentes de IA (pago directo en Solana)
 // TODO en un solo archivo (excepto package.json, que npm exige aparte).
 // ============================================================================
@@ -1795,9 +1931,10 @@ import { Connection, Keypair, PublicKey, SystemProgram, Transaction, sendAndConf
 import { mintTo, burn, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 
 const app = express();
+app.set("trust proxy", true); // detrás de Vercel/Render, para armar URLs públicas correctas
 app.use(cors());
 app.use(express.json());
 // El dashboard (public/index.html) se sirve desde este mismo servidor: una sola URL
@@ -1858,10 +1995,11 @@ async function marcarTxUsada(txHash) {
     await writeList("aeth:used-tx", usadas.slice(-5000));
 }
 
-// Verifica en la red real que `txHash` transfirió al menos `minLamports`
-// de SOL hacia SOLANA_PAYOUT. No confía en nada que el cliente diga —
-// vuelve a consultar la transacción directo al RPC.
-async function verificarPagoSol(txHash, minLamports) {
+// Verifica en la red real que `txHash` transfirió al menos `minLamports` de
+// SOL hacia `destino`. No confía en nada que el cliente diga — vuelve a
+// consultar la transacción directo al RPC. Cada transacción solo puede usarse
+// UNA vez (evita reciclar el mismo pago para varias cosas).
+async function verificarTransferencia(txHash, destino, minLamports) {
     if (await txYaUsada(txHash)) return { ok: false, motivo: "Esa transacción ya se usó para pagar otra cosa." };
     const r = await fetch(SOLANA_RPC, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1869,14 +2007,40 @@ async function verificarPagoSol(txHash, minLamports) {
     });
     const d = await r.json();
     const tx = d.result;
-    if (!tx || tx.meta?.err) return { ok: false, motivo: "La transacción no existe o falló on-chain." };
+    if (!tx || tx.meta?.err) return { ok: false, motivo: "La transacción no existe o falló on-chain (si acabas de enviarla, espera unos segundos a que se confirme)." };
     const accountKeys = (tx.transaction.message.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey));
-    const idx = accountKeys.indexOf(SOLANA_PAYOUT);
-    if (idx === -1) return { ok: false, motivo: "Esa transacción no le paga a la wallet de cobro de esta plataforma." };
+    const idx = accountKeys.indexOf(destino);
+    if (idx === -1) return { ok: false, motivo: `Esa transacción no le paga a ${destino}.` };
     const recibido = (tx.meta.postBalances[idx] ?? 0) - (tx.meta.preBalances[idx] ?? 0);
     if (recibido < minLamports) return { ok: false, motivo: `Se recibieron ${(recibido / LAMPORTS_PER_SOL).toFixed(6)} SOL, se necesitan ${(minLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL.` };
     await marcarTxUsada(txHash);
+    if (destino === SOLANA_PAYOUT) { // ingreso propio de la plataforma: llevar la cuenta real
+        try {
+            const px = await getSolUsdPrice().catch(() => null);
+            const rev = await readList("aeth:revenue");
+            rev.push({ tx: txHash, lamports: recibido, usd: px ? +((recibido / LAMPORTS_PER_SOL) * px).toFixed(6) : null, at: new Date().toISOString() });
+            await writeList("aeth:revenue", rev.slice(-5000));
+        } catch {}
+    }
     return { ok: true, recibidoLamports: recibido };
+}
+const verificarPagoSol = (txHash, minLamports) => verificarTransferencia(txHash, SOLANA_PAYOUT, minLamports);
+
+// Cobro de tarifa fija DENTRO de un handler (la versión middleware está abajo).
+// Devuelve { ok:true } o { ok:false, status, body } listo para responder.
+async function cobroFijo(usd, descripcion, tx) {
+    if (!SOLANA_PAYOUT) return { ok: true };
+    const solPrecio = await getSolUsdPrice().catch(() => null);
+    if (!tx) {
+        const montoSol = solPrecio ? +(usd / solPrecio).toFixed(6) : null;
+        return { ok: false, status: 402, body: { error: "Pago requerido", descripcion, priceUsd: usd, payTo: SOLANA_PAYOUT, network: "solana-mainnet", montoSolAprox: montoSol, comoPagar: `Envía ~${montoSol ?? "?"} SOL (≈ $${usd}) a 'payTo' y repite la llamada con el hash de esa transacción en 'feeTx' (o ?tx=).` } };
+    }
+    if (!solPrecio) return { ok: false, status: 502, body: { error: "No se pudo obtener el precio de SOL para verificar el pago; reintenta." } };
+    const minLamports = Math.floor((usd / solPrecio) * LAMPORTS_PER_SOL * 0.97); // 3% de margen por volatilidad
+    const v = await verificarPagoSol(tx, minLamports);
+    if (!v.ok) return { ok: false, status: 402, body: { error: v.motivo } };
+    logPayment({ route: descripcion, tx, priceUsd: usd }).catch(() => {});
+    return { ok: true };
 }
 
 // Middleware de "pared de pago" para un endpoint: si no llega ?tx=, explica
@@ -2240,142 +2404,39 @@ app.post("/api/oracle/attest", requierePago(0.01, "Notario: verifica y firma una
 // Cada agente registra SU PROPIO endpoint y SU PROPIA wallet de cobro.
 // Cuando otro agente lo consuma, paga directo a esa wallet — tu
 // plataforma solo indexa y da visibilidad (como Coinbase Agent.market).
-app.post("/api/registry/register", requierePago(0.05, "Cuota fija por listar tu servicio en el directorio M2M"), async (req, res) => {
-    const { agentId, serviceUrl, priceUsd, description, payToAddress, network } = req.body || {};
-    if (!agentId || !serviceUrl || !payToAddress || !network) {
-        return res.status(400).json({ error: "Faltan campos: agentId, serviceUrl, payToAddress, network" });
-    }
-    const registry = (await readList("aeth:registry")).filter((r) => r.agentId !== agentId);
-    registry.push({ agentId, serviceUrl, priceUsd, description, payToAddress, network, registeredAt: new Date().toISOString() });
-    await writeList("aeth:registry", registry);
-    res.json({ ok: true, total_agentes: registry.length });
+// Ruta histórica: mismo resultado que POST /api/market/agents (ahora emite agentToken).
+app.post("/api/registry/register", async (req, res) => {
+    try {
+        const r = await coreRegistrarAgente(req.body, req.body?.feeTx || req.query.tx);
+        res.status(r.status).json(r.body);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// ---------------------------------------------------------------------
-// 2.b) MERCADO DE PREDICCIÓN ENERGÉTICA ENTRE AGENTES (otra rama de
-//      mercado, pensada para máquinas: se resuelve solo contra el precio
-//      REE real, sin árbitro humano, y paga automáticamente a quien
-//      acertó — descontando una comisión para la plataforma)
-// ---------------------------------------------------------------------
-const currentHourKey = () => new Date().toISOString().slice(0, 13); // "YYYY-MM-DDTHH"
-const PREDICTION_STAKE_USD = 0.05;
-const PREDICTION_COMMISSION = 0.05; // 5% para la plataforma, del fondo total
-
-async function getOrCreateMarket(hourKey) {
-    const markets = await readObj("aeth:futures", {});
-    if (!markets[hourKey]) {
-        const price = await fetchReePriceValue();
-        markets[hourKey] = { hour: hourKey, baselinePrice: price?.value ?? null, yes: [], no: [], resolved: false };
-        await writeObj("aeth:futures", markets);
-    }
-    return markets;
-}
-
-async function stakeHandler(side, req, res) {
-    const { agentId, payoutAddress } = req.body || {};
-    if (!agentId || !payoutAddress) return res.status(400).json({ error: "Faltan agentId, payoutAddress" });
-    const hourKey = currentHourKey();
-    const markets = await getOrCreateMarket(hourKey);
-    markets[hourKey][side].push({ agentId, payoutAddress, amountUsd: PREDICTION_STAKE_USD, at: new Date().toISOString() });
-    await writeObj("aeth:futures", markets);
-    res.json({ ok: true, market: hourKey, side, baselinePrice: markets[hourKey].baselinePrice, pool: { yes: markets[hourKey].yes.length, no: markets[hourKey].no.length } });
-}
-app.post("/api/futures/stake-yes", requierePago(PREDICTION_STAKE_USD, "Apuesta a que el precio REE subirá en el mercado de la hora en curso"), (req, res) => stakeHandler("yes", req, res));
-app.post("/api/futures/stake-no", requierePago(PREDICTION_STAKE_USD, "Apuesta a que el precio REE bajará o se mantendrá en el mercado de la hora en curso"), (req, res) => stakeHandler("no", req, res));
-
-// Resuelve mercados de horas anteriores que sigan pendientes y paga a los
-// ganadores. Corre "perezosamente" (al primer /status después de que la
-// hora ya pasó) — el precio de resolución es el más reciente disponible
-// de REData en ese momento, una aproximación práctica, no un corte exacto
-// al segundo. Para mayor precisión puedes programar esto con Vercel Cron.
-async function resolvePendingMarkets() {
-    const markets = await readObj("aeth:futures", {});
-    const nowHour = currentHourKey();
-    for (const key of Object.keys(markets)) {
-        const m = markets[key];
-        if (m.resolved || key >= nowHour) continue;
-        const latest = await fetchReePriceValue().catch(() => null);
-        if (m.baselinePrice == null || !latest) continue;
-        const outcome = latest.value > m.baselinePrice ? "yes" : "no";
-        const winners = m[outcome];
-        const totalPoolUsd = (m.yes.length + m.no.length) * PREDICTION_STAKE_USD;
-        const payoutPoolUsd = totalPoolUsd * (1 - PREDICTION_COMMISSION);
-        const perWinnerUsd = winners.length > 0 ? payoutPoolUsd / winners.length : 0;
-        if (winners.length > 0 && perWinnerUsd > 0) {
-            try {
-                const solPrice = await getSolUsdPrice();
-                for (const w of winners) {
-                    try { w.payoutTx = await payoutSol(w.payoutAddress, perWinnerUsd / solPrice); } catch (e) { w.payoutError = e.message; }
-                }
-            } catch (e) { /* si falla el precio de SOL, se reintenta en la próxima resolución */ continue; }
-        }
-        m.resolved = true;
-        m.outcome = outcome;
-        m.resolvedPrice = latest.value;
-        m.perWinnerUsd = +perWinnerUsd.toFixed(4);
-    }
-    await writeObj("aeth:futures", markets);
-    return markets;
-}
-
-app.get("/api/futures/status", async (req, res) => {
-    const markets = await resolvePendingMarkets();
-    const hourKey = currentHourKey();
-    res.json({
-        open: markets[hourKey] ? { ...markets[hourKey], yes: markets[hourKey].yes.length, no: markets[hourKey].no.length } : null,
-        recent: Object.values(markets).filter((m) => m.resolved).sort((a, b) => (a.hour < b.hour ? 1 : -1)).slice(0, 10).map((m) => ({ hour: m.hour, baselinePrice: m.baselinePrice, resolvedPrice: m.resolvedPrice, outcome: m.outcome, ganadores: m[m.outcome]?.length ?? 0, perWinnerUsd: m.perWinnerUsd })),
-    });
-});
-
-// ---------------------------------------------------------------------
-// 3) REPUTACIÓN VERIFICADA ON-CHAIN (innovación: nadie puede autoasignarse
-//    puntos — cada operación se comprueba de verdad contra la blockchain
-//    antes de sumarla, porque en M2M el dinero nunca pasa por tu servidor)
-// ---------------------------------------------------------------------
-async function verifySolanaTx(txHash, network) {
-    const rpc = network === "mainnet" ? "https://api.mainnet-beta.solana.com" : "https://api.devnet.solana.com";
-    const r = await fetch(rpc, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTransaction", params: [txHash, { encoding: "json", maxSupportedTransactionVersion: 0 }] }),
-    });
-    const d = await r.json();
-    return !!d.result && !d.result.meta?.err;
-}
-
-async function verifyEvmTx(txHash, network) {
-    const rpc = network === "mainnet" ? "https://mainnet.base.org" : "https://sepolia.base.org";
-    const r = await fetch(rpc, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [txHash] }),
-    });
-    const d = await r.json();
-    return d.result && d.result.status === "0x1";
-}
-
-// Un agente reporta el hash de una operación M2M que acaba de cerrar. El
-// servidor NUNCA confía en el reporte por sí solo: lo verifica contra la
-// blockchain pública antes de sumarlo a la reputación de ese agente.
 app.post("/api/registry/report-settlement", async (req, res) => {
-    const { agentId, txHash, chain, network } = req.body || {}; // chain: "solana" | "evm"
-    if (!agentId || !txHash || !chain) return res.status(400).json({ error: "Faltan campos: agentId, txHash, chain" });
+    const { agentId, txHash, chain } = req.body || {}; // solo Solana; los tratos del mercado usan /api/market/deals/:id/settle
+    if (!agentId || !txHash) return res.status(400).json({ error: "Faltan campos: agentId, txHash" });
+    if (chain && chain !== "solana") return res.status(400).json({ error: "Solo se verifican transacciones de Solana." });
     const rep = await readList("aeth:reputation");
     if (rep.some((r) => r.txHash === txHash)) return res.status(409).json({ error: "Esa transacción ya fue registrada." });
+    // La transacción debe haber PAGADO a la wallet de ese agente o dispositivo: así nadie
+    // sube la reputación de otro con un hash cualquiera.
+    const destino = (await readList("aeth:registry")).find((a) => a.agentId === agentId)?.payToAddress
+        || (await readList("aeth:devices")).find((d) => d.deviceId === agentId)?.payToAddress;
+    if (!destino) return res.status(404).json({ error: "agentId/deviceId sin wallet de cobro registrada." });
     try {
-        const verified = chain === "solana" ? await verifySolanaTx(txHash, network) : await verifyEvmTx(txHash, network);
-        if (!verified) return res.status(422).json({ ok: false, verified: false, error: "La transacción no existe o falló on-chain." });
-        rep.push({ agentId, txHash, chain, network, verifiedAt: new Date().toISOString() });
+        const v = await verificarTransferencia(txHash, destino, 1);
+        if (!v.ok) return res.status(422).json({ ok: false, verified: false, error: v.motivo });
+        rep.push({ agentId, txHash, chain: "solana", network: "mainnet", verifiedAt: new Date().toISOString() });
         await writeList("aeth:reputation", rep);
         res.json({ ok: true, verified: true });
     } catch (err) {
         res.status(502).json({ error: "No se pudo consultar el RPC para verificar la tx", detail: err.message });
     }
 });
-
 app.get("/api/registry", async (req, res) => {
     const scoreByAgent = {};
     (await readList("aeth:reputation")).forEach((r) => { scoreByAgent[r.agentId] = (scoreByAgent[r.agentId] || 0) + 1; });
     const registry = await readList("aeth:registry");
-    res.json(registry.map((a) => ({ ...a, verified_ops: scoreByAgent[a.agentId] || 0 })));
+    res.json(registry.map(({ tokenHash, ...a }) => ({ ...a, verified_ops: scoreByAgent[a.agentId] || 0 })));
 });
 
 // Un agente paga la tarifa fija de arriba (en USDC o en créditos de energía)
@@ -2595,7 +2656,446 @@ app.get("/api/cron/broadcast-load-signal", async (req, res) => {
     }
 });
 
-app.get("/api/status", (req, res) => res.json({ status: "AETHELGARD backend activo", cobro: SOLANA_PAYOUT ? "SOL real, verificado on-chain" : "sin SOLANA_PAYOUT_ADDRESS configurado (modo pruebas, endpoints abiertos)" }));
+// ======================================================================
+// MERCADO REAL DE NEGOCIACIÓN ENTRE AGENTES DE IA
+// ======================================================================
+// Cualquier IA real puede conectarse por HTTP (ver /openapi.json y
+// /llms.txt) o por MCP (POST /mcp — Claude, ChatGPT y otros clientes MCP
+// solo necesitan la URL). Flujo completo:
+//   1. register_agent  → paga la cuota fija ($0.05 en SOL) y recibe su
+//                        agentToken UNA vez (se guarda solo su hash).
+//   2. create_order    → publica una orden de compra o venta de kWh.
+//   3. propose_deal    → otro agente propone precio sobre esa orden.
+//   4. counter_deal    → se turnan contraofertas (máx. 10 rondas).
+//   5. accept_deal     → quien acepta paga la tarifa fija de cierre
+//                        ($0.02 por defecto, DEAL_FEE_USD) — NUNCA un % de lo
+//                        negociado.
+//   6. settle_deal     → el comprador paga DIRECTO a la wallet del vendedor
+//                        y reporta el hash; el servidor verifica en la
+//                        blockchain destino y monto antes de dar el trato
+//                        por liquidado y sumar reputación a ambos.
+// La plataforma nunca custodia el dinero de la energía.
+const DEAL_FEE_USD = Number(process.env.DEAL_FEE_USD ?? 0.02);
+const REGISTER_FEE_USD = 0.05;
+const NEGOTIATION_TTL_MS = 24 * 3600 * 1000;   // una negociación sin movimiento caduca en 24 h
+const PAYMENT_WINDOW_MS = 60 * 60 * 1000;      // tras aceptar, el comprador tiene 1 h para pagar
+const MAX_ROUNDS = 10;
+
+const hashTok = (t) => createHash("sha256").update(String(t)).digest("hex");
+const isSolAddress = (a) => { try { new PublicKey(String(a)); return String(a).length >= 32 && String(a).length <= 44; } catch { return false; } };
+const fail = (status, error, extra = {}) => ({ status, body: { error, ...extra } });
+const okr = (body) => ({ status: 200, body });
+const num2 = (v) => (v === undefined || v === null || v === "" ? NaN : Number(v));
+
+async function authAgent(agentId, token) {
+    if (!agentId || !token) return null;
+    const a = (await readList("aeth:registry")).find((x) => x.agentId === agentId);
+    return a && a.tokenHash && a.tokenHash === hashTok(token) ? a : null;
+}
+const credsFromReq = (req) => ({
+    agentId: req.get("x-agent-id") || req.body?.agentId,
+    token: req.get("x-agent-token") || req.body?.agentToken,
+});
+
+// Caduca lo que corresponda y devuelve el estado actual del mercado.
+async function loadMarket() {
+    const orders = await readList("aeth:orders");
+    const deals = await readList("aeth:deals");
+    const now = Date.now();
+    let changed = false;
+    for (const d of deals) {
+        const order = orders.find((o) => o.orderId === d.orderId);
+        if (d.status === "negotiating" && now - new Date(d.updatedAt).getTime() > NEGOTIATION_TTL_MS) {
+            d.status = "expired"; d.updatedAt = new Date().toISOString(); changed = true;
+        } else if (d.status === "accepted" && now - new Date(d.acceptedAt).getTime() > PAYMENT_WINDOW_MS) {
+            d.status = "expired"; d.updatedAt = new Date().toISOString(); changed = true;
+            if (order) { order.remainingKwh += d.kwh; if (order.status === "filled") order.status = "open"; }
+        }
+    }
+    for (const o of orders) {
+        if (o.status === "open" && now > new Date(o.expiresAt).getTime()) { o.status = "expired"; changed = true; }
+    }
+    // Subastas: al vencer, gana la puja más alta (si llegó al precio de reserva) y se crea el trato
+    // en estado 'accepted': el ganador tiene 1 h para pagar directo al vendedor y llamar settle_deal.
+    const auctions = await readList("aeth:auctions");
+    let auctionsChanged = false;
+    for (const a of auctions) {
+        if (a.status === "open" && now > new Date(a.endsAt).getTime()) {
+            const best = a.bids.reduce((m, b) => (!m || b.price > m.price ? b : m), null);
+            auctionsChanged = true; changed = true;
+            if (best && best.price >= a.reservePriceUsdPerKwh) {
+                const at = new Date().toISOString();
+                const d = { dealId: "deal_" + randomUUID().slice(0, 8), orderId: a.auctionId, buyerId: best.by, sellerId: a.sellerId, kwh: a.kwh, priceUsdPerKwh: best.price, payTo: a.payTo, status: "accepted", turn: null, round: 1, acceptedAt: at, createdAt: at, updatedAt: at, history: [{ by: "subasta", action: "auction_won", kwh: a.kwh, price: best.price, message: `Ganó la subasta ${a.auctionId}`, at }] };
+                deals.push(d); a.status = "sold"; a.dealId = d.dealId; a.winnerId = best.by; a.finalPriceUsdPerKwh = best.price;
+            } else a.status = "unsold";
+        }
+    }
+    if (auctionsChanged) await writeList("aeth:auctions", auctions.slice(-500));
+    if (changed) { await writeList("aeth:orders", orders.slice(-1000)); await writeList("aeth:deals", deals.slice(-2000)); }
+    return { orders, deals, auctions };
+}
+const saveMarket = async (orders, deals) => { await writeList("aeth:orders", orders.slice(-1000)); await writeList("aeth:deals", deals.slice(-2000)); };
+
+const publicDeal = (d) => ({
+    dealId: d.dealId, orderId: d.orderId, buyerId: d.buyerId, sellerId: d.sellerId, kwh: d.kwh,
+    priceUsdPerKwh: d.priceUsdPerKwh, amountUsd: +(d.kwh * d.priceUsdPerKwh).toFixed(6), status: d.status,
+    turn: d.status === "negotiating" ? d.turn : null, round: d.round,
+    payTo: d.status === "accepted" || d.status === "settled" ? d.payTo : undefined,
+    settledTx: d.settledTx, updatedAt: d.updatedAt,
+    history: d.history.map((h) => ({ by: h.by, action: h.action, kwh: h.kwh, priceUsdPerKwh: h.price, message: h.message, at: h.at })),
+});
+const publicOrder = (o) => ({ orderId: o.orderId, agentId: o.agentId, side: o.side, remainingKwh: o.remainingKwh, limitPriceUsdPerKwh: o.limitPriceUsdPerKwh, status: o.status, expiresAt: o.expiresAt, createdAt: o.createdAt });
+
+// ---------- Registro de agente (con token) ----------
+async function coreRegistrarAgente(a, tx) {
+    const { agentId, serviceUrl, payToAddress, description, priceUsd, agentToken } = a || {};
+    if (!/^[A-Za-z0-9_.:-]{3,60}$/.test(agentId || "")) return fail(400, "agentId inválido: 3-60 caracteres (letras, números, _ . : -).");
+    if (!isSolAddress(payToAddress)) return fail(400, "payToAddress debe ser una dirección Solana válida (donde quieres recibir tus pagos).");
+    if (serviceUrl && !/^https?:\/\//.test(serviceUrl)) return fail(400, "serviceUrl debe empezar por http:// o https://");
+    const registry = await readList("aeth:registry");
+    const prev = registry.find((r) => r.agentId === agentId);
+    if (prev && (!prev.tokenHash || prev.tokenHash !== hashTok(agentToken || ""))) return fail(409, "Ese agentId ya existe. Para actualizarlo envía su agentToken; si es nuevo, elige otro agentId.");
+    const cobro = await cobroFijo(REGISTER_FEE_USD, "Alta de agente en el directorio/mercado", tx);
+    if (!cobro.ok) return { status: cobro.status, body: cobro.body };
+    const token = prev ? agentToken : randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+    const entry = { agentId, serviceUrl: serviceUrl || null, priceUsd: priceUsd ?? null, description: (description || "").slice(0, 200), payToAddress, network: "mainnet", tokenHash: hashTok(token), registeredAt: prev?.registeredAt || new Date().toISOString() };
+    await writeList("aeth:registry", [...registry.filter((r) => r.agentId !== agentId), entry]);
+    return okr({ ok: true, agentId, agentToken: prev ? "(sin cambios)" : token, aviso: prev ? "Perfil actualizado." : "GUARDA este agentToken: no se vuelve a mostrar. Va en el header x-agent-token (o en el campo agentToken)." });
+}
+
+// ---------- Órdenes ----------
+async function coreCrearOrden(agent, { side, kwh, limitPriceUsdPerKwh, ttlMinutes }) {
+    if (!["buy", "sell"].includes(side)) return fail(400, "side debe ser 'buy' o 'sell'.");
+    const k = num2(kwh), p = num2(limitPriceUsdPerKwh);
+    if (!(k > 0 && k <= 100000)) return fail(400, "kwh debe ser > 0 y ≤ 100000.");
+    if (!(p > 0 && p <= 100)) return fail(400, "limitPriceUsdPerKwh debe ser > 0 y ≤ 100 (USD por kWh).");
+    const ttl = Math.min(Math.max(Number(ttlMinutes) || 240, 5), 7 * 24 * 60);
+    const { orders, deals } = await loadMarket();
+    if (orders.filter((o) => o.agentId === agent.agentId && o.status === "open").length >= 5) return fail(429, "Máximo 5 órdenes abiertas por agente.");
+    const o = { orderId: "ord_" + randomUUID().slice(0, 8), agentId: agent.agentId, side, kwh: k, remainingKwh: k, limitPriceUsdPerKwh: p, payTo: agent.payToAddress, status: "open", createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + ttl * 60000).toISOString() };
+    orders.push(o);
+    await saveMarket(orders, deals);
+    return okr({ ok: true, order: publicOrder(o) });
+}
+async function coreCancelarOrden(agent, orderId) {
+    const { orders, deals } = await loadMarket();
+    const o = orders.find((x) => x.orderId === orderId);
+    if (!o) return fail(404, "Orden no encontrada.");
+    if (o.agentId !== agent.agentId) return fail(403, "Esa orden no es tuya.");
+    if (o.status !== "open") return fail(409, `La orden está '${o.status}'.`);
+    if (deals.some((d) => d.orderId === orderId && ["negotiating", "accepted"].includes(d.status))) return fail(409, "Hay negociaciones activas sobre esta orden; recházalas primero.");
+    o.status = "cancelled";
+    await saveMarket(orders, deals);
+    return okr({ ok: true, order: publicOrder(o) });
+}
+async function coreMercado({ side } = {}) {
+    const { orders } = await loadMarket();
+    let ref = null; try { ref = await fetchReePriceValue(); } catch {}
+    return okr({
+        referencePriceEurMwh: ref?.value ?? null,
+        ordenes: orders.filter((o) => o.status === "open" && (!side || o.side === side)).map(publicOrder),
+        ofertasDeDispositivosFisicos: await openDeviceOffers(),
+        nota: "Las ofertas de dispositivos físicos son de precio fijo: se pagan directo a su payToAddress y luego se reporta el hash. Las órdenes de agentes se negocian con propose_deal / counter_deal / accept_deal.",
+    });
+}
+
+// ---------- Negociación ----------
+async function coreProponer(agent, { orderId, kwh, priceUsdPerKwh, message }) {
+    const { orders, deals } = await loadMarket();
+    const o = orders.find((x) => x.orderId === orderId);
+    if (!o || o.status !== "open") return fail(404, "Orden no encontrada o ya no está abierta.");
+    if (o.agentId === agent.agentId) return fail(400, "No puedes negociar contra tu propia orden.");
+    const k = kwh === undefined ? o.remainingKwh : num2(kwh), p = num2(priceUsdPerKwh);
+    if (!(k > 0 && k <= o.remainingKwh)) return fail(400, `kwh debe ser > 0 y ≤ ${o.remainingKwh} (lo que queda en la orden).`);
+    if (!(p > 0 && p <= 100)) return fail(400, "priceUsdPerKwh debe ser > 0 y ≤ 100.");
+    if (deals.filter((d) => d.status === "negotiating" && (d.buyerId === agent.agentId || d.sellerId === agent.agentId)).length >= 10) return fail(429, "Máximo 10 negociaciones activas por agente.");
+    const buyerId = o.side === "sell" ? agent.agentId : o.agentId;
+    const sellerId = o.side === "sell" ? o.agentId : agent.agentId;
+    const payTo = o.side === "sell" ? o.payTo : agent.payToAddress;
+    const now = new Date().toISOString();
+    const d = { dealId: "deal_" + randomUUID().slice(0, 8), orderId, buyerId, sellerId, kwh: k, priceUsdPerKwh: p, payTo, status: "negotiating", turn: o.agentId, round: 1, history: [{ by: agent.agentId, action: "propose", kwh: k, price: p, message: String(message || "").slice(0, 300), at: now }], createdAt: now, updatedAt: now };
+    deals.push(d);
+    await saveMarket(orders, deals);
+    return okr({ ok: true, deal: publicDeal(d), siguiente: `Turno de ${d.turn}: puede aceptar, contraofertar o rechazar.` });
+}
+const findDealFor = (deals, dealId, agent) => {
+    const d = deals.find((x) => x.dealId === dealId);
+    if (!d) return { err: fail(404, "Negociación no encontrada.") };
+    if (![d.buyerId, d.sellerId].includes(agent.agentId)) return { err: fail(403, "No participas en esa negociación.") };
+    return { d };
+};
+async function coreContraoferta(agent, dealId, { priceUsdPerKwh, kwh, message }) {
+    const { orders, deals } = await loadMarket();
+    const { d, err } = findDealFor(deals, dealId, agent); if (err) return err;
+    if (d.status !== "negotiating") return fail(409, `La negociación está '${d.status}'.`);
+    if (d.turn !== agent.agentId) return fail(409, `No es tu turno (turno de ${d.turn}).`);
+    if (d.round >= MAX_ROUNDS) return fail(409, "Se alcanzó el máximo de rondas; acepta o rechaza.");
+    const order = orders.find((o) => o.orderId === d.orderId);
+    const p = priceUsdPerKwh === undefined ? d.priceUsdPerKwh : num2(priceUsdPerKwh);
+    const k = kwh === undefined ? d.kwh : num2(kwh);
+    if (!(p > 0 && p <= 100)) return fail(400, "priceUsdPerKwh debe ser > 0 y ≤ 100.");
+    if (!(k > 0 && order && k <= order.remainingKwh)) return fail(400, "kwh inválido o mayor a lo que queda en la orden.");
+    d.priceUsdPerKwh = p; d.kwh = k; d.round += 1;
+    d.turn = agent.agentId === d.buyerId ? d.sellerId : d.buyerId;
+    d.updatedAt = new Date().toISOString();
+    d.history.push({ by: agent.agentId, action: "counter", kwh: k, price: p, message: String(message || "").slice(0, 300), at: d.updatedAt });
+    await saveMarket(orders, deals);
+    return okr({ ok: true, deal: publicDeal(d) });
+}
+async function coreAceptar(agent, dealId, feeTx) {
+    const { orders, deals } = await loadMarket();
+    const { d, err } = findDealFor(deals, dealId, agent); if (err) return err;
+    if (d.status !== "negotiating") return fail(409, `La negociación está '${d.status}'.`);
+    if (d.turn !== agent.agentId) return fail(409, `Solo puede aceptar quien tiene el turno (${d.turn}).`);
+    const order = orders.find((o) => o.orderId === d.orderId);
+    if (!order || order.remainingKwh < d.kwh) return fail(409, "La orden ya no tiene esa cantidad disponible.");
+    const cobro = await cobroFijo(DEAL_FEE_USD, `Tarifa fija de cierre del trato ${dealId}`, feeTx);
+    if (!cobro.ok) return { status: cobro.status, body: { ...cobro.body, nota: `Tarifa fija de cierre: $${DEAL_FEE_USD}. NO es un porcentaje del trato.` } };
+    d.status = "accepted"; d.acceptedAt = new Date().toISOString(); d.updatedAt = d.acceptedAt;
+    d.history.push({ by: agent.agentId, action: "accept", kwh: d.kwh, price: d.priceUsdPerKwh, at: d.acceptedAt });
+    order.remainingKwh -= d.kwh; if (order.remainingKwh <= 0) order.status = "filled";
+    await saveMarket(orders, deals);
+    const amountUsd = +(d.kwh * d.priceUsdPerKwh).toFixed(6);
+    const solPrecio = await getSolUsdPrice().catch(() => null);
+    return okr({ ok: true, deal: publicDeal(d), pago: { quienPaga: d.buyerId, aQuien: d.sellerId, payTo: d.payTo, amountUsd, montoSolAprox: solPrecio ? +(amountUsd / solPrecio).toFixed(6) : null, venceEn: new Date(Date.now() + PAYMENT_WINDOW_MS).toISOString(), siguiente: "El comprador transfiere SOL directo a payTo y llama settle_deal con el hash de esa transacción." } });
+}
+async function coreRechazar(agent, dealId) {
+    const { orders, deals } = await loadMarket();
+    const { d, err } = findDealFor(deals, dealId, agent); if (err) return err;
+    if (d.status !== "negotiating") return fail(409, `La negociación está '${d.status}'.`);
+    d.status = "rejected"; d.updatedAt = new Date().toISOString();
+    d.history.push({ by: agent.agentId, action: "reject", at: d.updatedAt });
+    await saveMarket(orders, deals);
+    return okr({ ok: true, deal: publicDeal(d) });
+}
+async function coreLiquidar(agent, dealId, txHash) {
+    const { orders, deals } = await loadMarket();
+    const { d, err } = findDealFor(deals, dealId, agent); if (err) return err;
+    if (d.buyerId !== agent.agentId) return fail(403, "Solo el comprador liquida el trato.");
+    if (d.status !== "accepted") return fail(409, `El trato está '${d.status}' (debe estar 'accepted' y dentro de la ventana de pago de 1 h).`);
+    if (!txHash) return fail(400, "Falta txHash.");
+    const solPrecio = await getSolUsdPrice().catch(() => null);
+    if (!solPrecio) return fail(502, "No se pudo obtener el precio de SOL para verificar; reintenta.");
+    const minLamports = Math.floor(((d.kwh * d.priceUsdPerKwh) / solPrecio) * LAMPORTS_PER_SOL * 0.97);
+    const v = await verificarTransferencia(txHash, d.payTo, minLamports);
+    if (!v.ok) return fail(422, v.motivo);
+    d.status = "settled"; d.settledTx = txHash; d.updatedAt = new Date().toISOString();
+    d.history.push({ by: agent.agentId, action: "settle", at: d.updatedAt });
+    const rep = await readList("aeth:reputation");
+    rep.push({ agentId: d.buyerId, txHash, chain: "solana", network: "mainnet", dealId, verifiedAt: d.updatedAt });
+    rep.push({ agentId: d.sellerId, txHash, chain: "solana", network: "mainnet", dealId, verifiedAt: d.updatedAt });
+    await writeList("aeth:reputation", rep);
+    await saveMarket(orders, deals);
+    return okr({ ok: true, verified: true, deal: publicDeal(d), nota: "Pago verificado on-chain (destino y monto). Reputación +1 para comprador y vendedor." });
+}
+async function coreMisTratos(agent) {
+    const { deals } = await loadMarket();
+    return okr({ tratos: deals.filter((d) => [d.buyerId, d.sellerId].includes(agent.agentId)).slice(-50).reverse().map(publicDeal) });
+}
+
+// ---------- Subastas (pujas reales entre agentes) ----------
+const publicAuction = (a) => {
+    const best = a.bids.reduce((m, b) => (!m || b.price > m.price ? b : m), null);
+    return { auctionId: a.auctionId, sellerId: a.sellerId, kwh: a.kwh, reservePriceUsdPerKwh: a.reservePriceUsdPerKwh, status: a.status, endsAt: a.endsAt, bestBidUsdPerKwh: best?.price ?? null, bestBidder: best?.by ?? null, bidCount: a.bids.length, dealId: a.dealId, winnerId: a.winnerId, finalPriceUsdPerKwh: a.finalPriceUsdPerKwh, bids: a.bids.slice(-20).map((b) => ({ by: b.by, priceUsdPerKwh: b.price, at: b.at })) };
+};
+async function coreCrearSubasta(agent, { kwh, reservePriceUsdPerKwh, durationMinutes, feeTx }) {
+    const k = num2(kwh), r = num2(reservePriceUsdPerKwh);
+    if (!(k > 0 && k <= 100000)) return fail(400, "kwh debe ser > 0 y ≤ 100000.");
+    if (!(r > 0 && r <= 100)) return fail(400, "reservePriceUsdPerKwh (precio mínimo) debe ser > 0 y ≤ 100.");
+    const dur = Math.min(Math.max(Number(durationMinutes) || 60, 5), 24 * 60);
+    const { auctions } = await loadMarket();
+    if (auctions.filter((a) => a.sellerId === agent.agentId && a.status === "open").length >= 3) return fail(429, "Máximo 3 subastas abiertas por vendedor.");
+    const cobro = await cobroFijo(DEAL_FEE_USD, "Tarifa fija por abrir una subasta de energía", feeTx);
+    if (!cobro.ok) return { status: cobro.status, body: cobro.body };
+    const now = new Date().toISOString();
+    const a = { auctionId: "auc_" + randomUUID().slice(0, 8), sellerId: agent.agentId, kwh: k, reservePriceUsdPerKwh: r, payTo: agent.payToAddress, status: "open", createdAt: now, endsAt: new Date(Date.now() + dur * 60000).toISOString(), bids: [] };
+    const all = await readList("aeth:auctions");
+    all.push(a); await writeList("aeth:auctions", all.slice(-500));
+    return okr({ ok: true, auction: publicAuction(a) });
+}
+async function corePujar(agent, auctionId, priceUsdPerKwh) {
+    const all = await readList("aeth:auctions");
+    await loadMarket(); // cierra las vencidas
+    const fresh = await readList("aeth:auctions");
+    const a = fresh.find((x) => x.auctionId === auctionId);
+    if (!a) return fail(404, "Subasta no encontrada.");
+    if (a.status !== "open") return fail(409, `La subasta está '${a.status}'.`);
+    if (a.sellerId === agent.agentId) return fail(400, "No puedes pujar en tu propia subasta.");
+    const p = num2(priceUsdPerKwh);
+    if (!(p > 0 && p <= 100)) return fail(400, "priceUsdPerKwh debe ser > 0 y ≤ 100.");
+    if (p < a.reservePriceUsdPerKwh) return fail(422, `La puja debe ser ≥ el precio mínimo ($${a.reservePriceUsdPerKwh}/kWh).`);
+    const best = a.bids.reduce((m, b) => (!m || b.price > m.price ? b : m), null);
+    if (best && p <= best.price) return fail(422, `Debes superar la puja actual ($${best.price}/kWh).`);
+    if (a.bids.filter((b) => b.by === agent.agentId).length >= 20 || a.bids.length >= 200) return fail(429, "Límite de pujas alcanzado en esta subasta.");
+    const now = Date.now();
+    a.bids.push({ by: agent.agentId, price: p, at: new Date(now).toISOString() });
+    if (new Date(a.endsAt).getTime() - now < 120000) a.endsAt = new Date(now + 120000).toISOString(); // anti-last-second: +2 min
+    await writeList("aeth:auctions", fresh);
+    return okr({ ok: true, auction: publicAuction(a), nota: "Si nadie te supera cuando termine el tiempo, ganas: tendrás 1 hora para pagar directo al vendedor y llamar settle_deal." });
+}
+
+// ---------- Rutas HTTP ----------
+const send = (res, r) => res.status(r.status).json(r.body);
+const withAgent = (fn) => async (req, res) => {
+    try {
+        const { agentId, token } = credsFromReq(req);
+        const agent = await authAgent(agentId, token);
+        if (!agent) return res.status(401).json({ error: "Credenciales inválidas. Envía x-agent-id y x-agent-token (o agentId/agentToken en el cuerpo). Si aún no tienes, registra tu agente con POST /api/market/agents (cuota $0.05)." });
+        send(res, await fn(agent, req));
+    } catch (e) { res.status(500).json({ error: "Error interno del mercado", detail: e.message }); }
+};
+app.post("/api/market/agents", async (req, res) => { try { send(res, await coreRegistrarAgente(req.body, req.body?.feeTx || req.query.tx)); } catch (e) { res.status(500).json({ error: e.message }); } });
+app.get("/api/market", async (req, res) => send(res, await coreMercado({ side: req.query.side })));
+app.post("/api/market/orders", withAgent((a, req) => coreCrearOrden(a, req.body || {})));
+app.post("/api/market/orders/:id/cancel", withAgent((a, req) => coreCancelarOrden(a, req.params.id)));
+app.post("/api/market/orders/:id/propose", withAgent((a, req) => coreProponer(a, { ...(req.body || {}), orderId: req.params.id })));
+app.post("/api/market/deals/:id/counter", withAgent((a, req) => coreContraoferta(a, req.params.id, req.body || {})));
+app.post("/api/market/deals/:id/accept", withAgent((a, req) => coreAceptar(a, req.params.id, req.body?.feeTx || req.query.tx)));
+app.post("/api/market/deals/:id/reject", withAgent((a, req) => coreRechazar(a, req.params.id)));
+app.post("/api/market/deals/:id/settle", withAgent((a, req) => coreLiquidar(a, req.params.id, req.body?.txHash)));
+app.post("/api/market/auctions", withAgent((a, req) => coreCrearSubasta(a, { ...(req.body || {}), feeTx: req.body?.feeTx || req.query.tx })));
+app.post("/api/market/auctions/:id/bid", withAgent((a, req) => corePujar(a, req.params.id, req.body?.priceUsdPerKwh)));
+app.get("/api/market/my-deals", withAgent((a) => coreMisTratos(a)));
+
+// Feed público (sin credenciales) para el dashboard: lo que realmente pasa en el mercado.
+app.get("/api/market/feed", async (req, res) => {
+    const { orders, deals, auctions } = await loadMarket();
+    res.json({
+        subastas: auctions.slice(-30).reverse().map(publicAuction),
+        ordenesAbiertas: orders.filter((o) => o.status === "open").slice(-50).reverse().map(publicOrder),
+        tratos: deals.slice(-50).reverse().map(publicDeal),
+        resumen: { agentes: (await readList("aeth:registry")).filter((a) => a.tokenHash).length, tratosLiquidados: deals.filter((d) => d.status === "settled").length, tratosEnNegociacion: deals.filter((d) => d.status === "negotiating").length, subastasAbiertas: auctions.filter((a) => a.status === "open").length },
+    });
+});
+
+// ---------- MCP (Model Context Protocol, transporte HTTP) ----------
+const J = { type: "object", additionalProperties: false };
+const credProps = { agentId: { type: "string", description: "Tu agentId registrado" }, agentToken: { type: "string", description: "Tu agentToken (se entregó una sola vez al registrarte)" } };
+const withCreds = (props, required = []) => ({ ...J, properties: { ...credProps, ...props }, required: ["agentId", "agentToken", ...required] });
+const MCP_TOOLS = [
+    { name: "market_overview", description: "Lista las órdenes abiertas de otros agentes y las ofertas de dispositivos físicos (inversores, medidores, baterías) con precio fijo, más el precio eléctrico real de referencia (REE). No requiere registro.", inputSchema: { ...J, properties: { side: { type: "string", enum: ["buy", "sell"], description: "Filtra por lado de la orden" } } } },
+    { name: "how_to_join", description: "Explica cómo registrarse, las tarifas fijas y el flujo de pago. No requiere registro.", inputSchema: { ...J, properties: {} } },
+    { name: "register_agent", description: "Registra tu agente. Primera llamada SIN feeTx devuelve las instrucciones de pago ($0.05 en SOL). Paga y repite con feeTx=<hash de esa transacción> para recibir tu agentToken (se muestra una sola vez).", inputSchema: { ...J, properties: { agentId: { type: "string" }, payToAddress: { type: "string", description: "Tu wallet Solana donde recibirás pagos" }, serviceUrl: { type: "string" }, description: { type: "string" }, feeTx: { type: "string", description: "Hash de la transacción de la cuota" } }, required: ["agentId", "payToAddress"] } },
+    { name: "create_order", description: "Publica una orden de compra o venta de energía (kWh) a un precio límite en USD/kWh.", inputSchema: withCreds({ side: { type: "string", enum: ["buy", "sell"] }, kwh: { type: "number" }, limitPriceUsdPerKwh: { type: "number" }, ttlMinutes: { type: "number" } }, ["side", "kwh", "limitPriceUsdPerKwh"]) },
+    { name: "cancel_order", description: "Cancela una orden tuya sin negociaciones activas.", inputSchema: withCreds({ orderId: { type: "string" } }, ["orderId"]) },
+    { name: "propose_deal", description: "Propone un precio sobre la orden de otro agente. Si la orden es de venta, tú eres el comprador; si es de compra, tú eres el vendedor (y cobrarás en tu payToAddress).", inputSchema: withCreds({ orderId: { type: "string" }, priceUsdPerKwh: { type: "number" }, kwh: { type: "number" }, message: { type: "string" } }, ["orderId", "priceUsdPerKwh"]) },
+    { name: "counter_deal", description: "Contraoferta cuando es tu turno (máx. 10 rondas).", inputSchema: withCreds({ dealId: { type: "string" }, priceUsdPerKwh: { type: "number" }, kwh: { type: "number" }, message: { type: "string" } }, ["dealId"]) },
+    { name: "accept_deal", description: "Acepta los términos actuales cuando es tu turno. Quien acepta paga la tarifa fija de cierre (no un porcentaje). Primera llamada sin feeTx devuelve las instrucciones de pago.", inputSchema: withCreds({ dealId: { type: "string" }, feeTx: { type: "string" } }, ["dealId"]) },
+    { name: "reject_deal", description: "Rechaza la negociación.", inputSchema: withCreds({ dealId: { type: "string" } }, ["dealId"]) },
+    { name: "settle_deal", description: "Solo el comprador: tras transferir SOL directo a la wallet del vendedor, reporta el hash. El servidor verifica en la blockchain destino y monto.", inputSchema: withCreds({ dealId: { type: "string" }, txHash: { type: "string" } }, ["dealId", "txHash"]) },
+    { name: "create_auction", description: "Vendedor: abre una subasta ascendente de kWh con precio mínimo (tarifa fija de apertura; sin feeTx devuelve instrucciones de pago). Al terminar el tiempo gana la puja más alta y se crea el trato.", inputSchema: withCreds({ kwh: { type: "number" }, reservePriceUsdPerKwh: { type: "number" }, durationMinutes: { type: "number" }, feeTx: { type: "string" } }, ["kwh", "reservePriceUsdPerKwh"]) },
+    { name: "place_bid", description: "Comprador: puja en una subasta abierta (debe superar la puja actual y el precio mínimo). Si ganas, tienes 1 hora para pagar directo al vendedor y llamar settle_deal.", inputSchema: withCreds({ auctionId: { type: "string" }, priceUsdPerKwh: { type: "number" } }, ["auctionId", "priceUsdPerKwh"]) },
+    { name: "my_deals", description: "Lista tus negociaciones y su estado.", inputSchema: withCreds({}) },
+];
+const HOWTO = () => ({
+    plataforma: "AETHELGARD — mercado de energía entre agentes de IA. Dinero real en Solana mainnet; la plataforma no custodia la energía ni su pago.",
+    tarifasFijas: { registro: `$${REGISTER_FEE_USD}`, cierreDeTrato: `$${DEAL_FEE_USD} (paga quien acepta)`, nota: "Siempre montos fijos, nunca un porcentaje del trato. Se pagan en SOL a la wallet de la plataforma." },
+    pasos: ["register_agent (sin feeTx) → paga → register_agent (con feeTx) → guarda agentToken", "create_order o propose_deal sobre una orden existente", "counter_deal / accept_deal  (o subasta: create_auction / place_bid)", "El comprador transfiere SOL directo al vendedor (payTo) y llama settle_deal con el hash"],
+    requisitos: "Tu agente necesita una wallet Solana con SOL y capacidad de firmar y enviar transferencias.",
+});
+async function mcpCall(name, a = {}) {
+    if (name === "market_overview") return coreMercado({ side: a.side });
+    if (name === "how_to_join") return okr(HOWTO());
+    if (name === "register_agent") return coreRegistrarAgente(a, a.feeTx);
+    const agent = await authAgent(a.agentId, a.agentToken);
+    if (!agent) return fail(401, "Credenciales inválidas: envía agentId y agentToken. Si aún no tienes, usa register_agent.");
+    switch (name) {
+        case "create_order": return coreCrearOrden(agent, a);
+        case "cancel_order": return coreCancelarOrden(agent, a.orderId);
+        case "propose_deal": return coreProponer(agent, a);
+        case "counter_deal": return coreContraoferta(agent, a.dealId, a);
+        case "accept_deal": return coreAceptar(agent, a.dealId, a.feeTx);
+        case "reject_deal": return coreRechazar(agent, a.dealId);
+        case "settle_deal": return coreLiquidar(agent, a.dealId, a.txHash);
+        case "create_auction": return coreCrearSubasta(agent, a);
+        case "place_bid": return corePujar(agent, a.auctionId, a.priceUsdPerKwh);
+        case "my_deals": return coreMisTratos(agent);
+        default: return fail(404, `Herramienta desconocida: ${name}`);
+    }
+}
+async function mcpHandle(msg) {
+    const id = msg.id;
+    const rpcErr = (code, message) => ({ jsonrpc: "2.0", id, error: { code, message } });
+    if (id === undefined) return null; // notificación (p. ej. notifications/initialized): sin respuesta
+    switch (msg.method) {
+        case "initialize": return { jsonrpc: "2.0", id, result: { protocolVersion: msg.params?.protocolVersion || "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "aethelgard-energy-market", version: "1.0.0" }, instructions: "Mercado real de energía entre agentes. Empieza con how_to_join y market_overview." } };
+        case "ping": return { jsonrpc: "2.0", id, result: {} };
+        case "tools/list": return { jsonrpc: "2.0", id, result: { tools: MCP_TOOLS } };
+        case "tools/call": {
+            try {
+                const r = await mcpCall(msg.params?.name, msg.params?.arguments || {});
+                return { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: JSON.stringify(r.body, null, 2) }], isError: r.status >= 400 && r.status !== 402 } };
+            } catch (e) { return { jsonrpc: "2.0", id, result: { content: [{ type: "text", text: "Error interno: " + e.message }], isError: true } }; }
+        }
+        default: return rpcErr(-32601, `Método no soportado: ${msg.method}`);
+    }
+}
+app.post("/mcp", async (req, res) => {
+    const body = req.body;
+    if (Array.isArray(body)) {
+        const out = (await Promise.all(body.map(mcpHandle))).filter(Boolean);
+        return out.length ? res.json(out) : res.status(202).end();
+    }
+    if (!body || typeof body !== "object" || body.jsonrpc !== "2.0") return res.status(400).json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Solicitud JSON-RPC 2.0 inválida" } });
+    const out = await mcpHandle(body);
+    return out ? res.json(out) : res.status(202).end();
+});
+app.get("/mcp", (req, res) => res.status(405).set("Allow", "POST").json({ error: "Este es un servidor MCP por HTTP: usa POST con JSON-RPC 2.0." }));
+
+// ---------- Descubrimiento para IAs ----------
+const baseUrl = (req) => `${req.protocol}://${req.get("host")}`;
+app.get("/llms.txt", (req, res) => {
+    const u = baseUrl(req);
+    res.type("text/plain").send(`# AETHELGARD — mercado de energía entre agentes de IA
+> Dinero real (SOL, Solana mainnet). Los agentes registran, publican órdenes de kWh, negocian precio por rondas y liquidan pagando directo entre ellos. La plataforma cobra tarifas FIJAS (registro $${REGISTER_FEE_USD}, cierre $${DEAL_FEE_USD}), nunca un porcentaje.
+
+## Conexión
+- MCP (HTTP, JSON-RPC 2.0): POST ${u}/mcp  → herramientas: market_overview, how_to_join, register_agent, create_order, cancel_order, propose_deal, counter_deal, accept_deal, reject_deal, settle_deal, create_auction, place_bid, my_deals
+- REST: ${u}/openapi.json
+- Estado del mercado (público): GET ${u}/api/market  y  GET ${u}/api/market/feed
+
+## Flujo
+1. register_agent (sin feeTx) → devuelve a qué wallet pagar $${REGISTER_FEE_USD} en SOL → pagas → register_agent con feeTx → recibes agentToken (una sola vez).
+2. create_order (compra/venta de kWh a un precio límite USD/kWh) o propose_deal sobre una orden existente.
+3. counter_deal / accept_deal (quien acepta paga la tarifa fija de cierre $${DEAL_FEE_USD}).
+   Alternativa por subasta: el vendedor abre create_auction (tarifa fija $${DEAL_FEE_USD}), los compradores usan place_bid; al vencer gana la puja más alta y el trato queda listo para pagar.
+4. El comprador transfiere SOL directo a la wallet del vendedor y llama settle_deal con el hash; el servidor verifica destino y monto en la blockchain.
+`);
+});
+app.get("/openapi.json", (req, res) => {
+    const hdr = [{ name: "x-agent-id", in: "header", required: true, schema: { type: "string" } }, { name: "x-agent-token", in: "header", required: true, schema: { type: "string" } }];
+    const body = (props, req_ = []) => ({ required: true, content: { "application/json": { schema: { type: "object", properties: props, required: req_ } } } });
+    const op = (summary, extra = {}) => ({ summary, responses: { 200: { description: "OK" }, 402: { description: "Pago requerido: el cuerpo trae wallet, monto y cómo reintentar" }, 401: { description: "Credenciales inválidas" } }, ...extra });
+    res.json({
+        openapi: "3.0.3",
+        info: { title: "AETHELGARD — Mercado de energía entre agentes de IA", version: "1.0.0", description: "Dinero real en Solana mainnet. Tarifas fijas, nunca porcentajes. MCP también disponible en POST /mcp." },
+        servers: [{ url: baseUrl(req) }],
+        paths: {
+            "/api/market": { get: op("Órdenes abiertas + ofertas de dispositivos + precio de referencia", { parameters: [{ name: "side", in: "query", schema: { type: "string", enum: ["buy", "sell"] } }] }) },
+            "/api/market/feed": { get: op("Feed público de órdenes y tratos") },
+            "/api/market/agents": { post: op(`Registrar agente (cuota $${REGISTER_FEE_USD} en SOL; sin feeTx devuelve 402 con instrucciones)`, { requestBody: body({ agentId: { type: "string" }, payToAddress: { type: "string" }, serviceUrl: { type: "string" }, description: { type: "string" }, feeTx: { type: "string" } }, ["agentId", "payToAddress"]) }) },
+            "/api/market/orders": { post: op("Crear orden", { parameters: hdr, requestBody: body({ side: { type: "string", enum: ["buy", "sell"] }, kwh: { type: "number" }, limitPriceUsdPerKwh: { type: "number" }, ttlMinutes: { type: "number" } }, ["side", "kwh", "limitPriceUsdPerKwh"]) }) },
+            "/api/market/orders/{id}/cancel": { post: op("Cancelar orden propia", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }] }) },
+            "/api/market/orders/{id}/propose": { post: op("Proponer precio sobre una orden", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }], requestBody: body({ priceUsdPerKwh: { type: "number" }, kwh: { type: "number" }, message: { type: "string" } }, ["priceUsdPerKwh"]) }) },
+            "/api/market/deals/{id}/counter": { post: op("Contraofertar en tu turno", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }], requestBody: body({ priceUsdPerKwh: { type: "number" }, kwh: { type: "number" }, message: { type: "string" } }) }) },
+            "/api/market/deals/{id}/accept": { post: op(`Aceptar en tu turno (tarifa fija de cierre $${DEAL_FEE_USD})`, { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }], requestBody: body({ feeTx: { type: "string" } }) }) },
+            "/api/market/deals/{id}/reject": { post: op("Rechazar", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }] }) },
+            "/api/market/deals/{id}/settle": { post: op("Comprador reporta el hash de su pago al vendedor; se verifica on-chain", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }], requestBody: body({ txHash: { type: "string" } }, ["txHash"]) }) },
+            "/api/market/auctions": { post: op(`Abrir subasta de kWh (tarifa fija $${DEAL_FEE_USD})`, { parameters: hdr, requestBody: body({ kwh: { type: "number" }, reservePriceUsdPerKwh: { type: "number" }, durationMinutes: { type: "number" }, feeTx: { type: "string" } }, ["kwh", "reservePriceUsdPerKwh"]) }) },
+            "/api/market/auctions/{id}/bid": { post: op("Pujar en una subasta abierta", { parameters: [...hdr, { name: "id", in: "path", required: true, schema: { type: "string" } }], requestBody: body({ priceUsdPerKwh: { type: "number" } }, ["priceUsdPerKwh"]) }) },
+            "/api/market/my-deals": { get: op("Mis negociaciones", { parameters: hdr }) },
+        },
+    });
+});
+
+// Ingresos reales cobrados (cada pago fue verificado on-chain). Solo totales, sin datos de pagadores.
+app.get("/api/revenue/summary", async (req, res) => {
+    const rev = await readList("aeth:revenue");
+    const now = Date.now(), d30 = rev.filter((r) => now - new Date(r.at).getTime() < 30 * 86400000);
+    const sum = (a) => +a.reduce((t, r) => t + (r.usd || 0), 0).toFixed(4);
+    res.json({ wallet: SOLANA_PAYOUT, pagosVerificados: rev.length, totalUsd: sum(rev), totalSol: +(rev.reduce((t, r) => t + r.lamports, 0) / LAMPORTS_PER_SOL).toFixed(6), ultimos30dUsd: sum(d30), ultimos30dPagos: d30.length, ultimos: rev.slice(-10).reverse().map((r) => ({ at: r.at, usd: r.usd, tx: r.tx })) });
+});
+app.get("/api/status", (req, res) => res.json({ status: "AETHELGARD backend activo", mcp: "/mcp", openapi: "/openapi.json", llms: "/llms.txt", cobro: SOLANA_PAYOUT ? "SOL real, verificado on-chain" : "sin SOLANA_PAYOUT_ADDRESS configurado (modo pruebas, endpoints abiertos)" }));
 
 // ---------------------------------------------------------------------
 // 7) HUELLA IA — la energía de las propias máquinas como producto
@@ -2691,11 +3191,9 @@ export default app;
 // 3) Vuelve a llamar el MISMO endpoint agregando ?tx=<firma_de_esa_tx>.
 //    El servidor la verifica contra la blockchain y responde con los datos.
 // No hace falta ningún SDK de x402 ni cuenta de Coinbase para esto.
-
 </script>
 
-<script type="text/plain" id="bridge-src">
-// ============================================================================
+<script type="text/plain" id="bridge-src">// ============================================================================
 // AETHELGARD — Puente local de dispositivos (inversores, dataloggers, módulos
 // WiFi, gateways). Sin dependencias: solo Node 18+.
 // ============================================================================
@@ -2828,11 +3326,9 @@ async function tick() {
 console.log(`Puente AETHELGARD activo → ${cfg.backendUrl} cada ${interval / 1000}s`);
 tick();
 setInterval(tick, interval);
-
 </script>
 
-<script type="text/plain" id="pkg-src">
-{
+<script type="text/plain" id="pkg-src">{
   "name": "aethelgard-backend",
   "version": "0.2.0",
   "type": "module",
@@ -2851,11 +3347,9 @@ setInterval(tick, interval);
     "tweetnacl": "^1.0.3"
   }
 }
-
 </script>
 
-<script type="text/plain" id="vercel-src">
-{
+<script type="text/plain" id="vercel-src">{
   "crons": [
     {
       "path": "/api/cron/broadcast-load-signal",
@@ -2863,19 +3357,15 @@ setInterval(tick, interval);
     }
   ]
 }
-
 </script>
 
-<script type="text/plain" id="gitignore-src">
-node_modules/
+<script type="text/plain" id="gitignore-src">node_modules/
 .env
 .env.local
 *.log
-
 </script>
 
-<script type="text/plain" id="bridgecfg-src">
-{
+<script type="text/plain" id="bridgecfg-src">{
   "backendUrl": "https://tu-proyecto.vercel.app",
   "deviceId": "inversor-casa-01",
   "token": "PEGA_AQUI_EL_TOKEN_QUE_TE_DIO_EL_REGISTRO",
@@ -2900,7 +3390,6 @@ node_modules/
   "_NOTA_2": "Para HTTP/JSON local usa en vez de 'source': { \"mode\": \"http-json\", \"url\": \"http://192.168.1.50/status\", \"map\": { \"pvW\": \"data.pv.power\", \"batterySoc\": \"data.battery.soc\" } }",
   "_NOTA_3": "Para un gateway con varios hijos quita 'source' y usa 'children': [ { \"childId\": \"micro-1\", \"source\": { ... } }, { \"childId\": \"micro-2\", \"source\": { ... } } ] — cada hijo debe estar registrado con parentGatewayId = deviceId de este gateway."
 }
-
 </script>
 </body>
 </html>
