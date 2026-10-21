@@ -390,6 +390,18 @@ curl -X POST ${url}/api/devices/telemetry \\
             try { const r = await fetch(`${backendUrl}/api/datamarket/catalog`); setCatalog(await r.json()); } catch (e) { setBackendMsg("No se pudo cargar el catálogo: " + e.message); }
         };
 
+        const [serverStatus, setServerStatus] = useState(null);
+        const isLocalCopy = !location.protocol.startsWith('http') || ['localhost', '127.0.0.1'].includes(location.hostname);
+        const checkServer = async () => {
+            if (!backendUrl) { setServerStatus(null); return; }
+            try { const r = await fetch(`${backendUrl}/api/status`); setServerStatus(r.ok ? await r.json() : { error: 'HTTP ' + r.status }); } catch (e) { setServerStatus({ error: 'sin conexión' }); }
+        };
+        const downloadProject = async () => {
+            let htmlText = null;
+            try { const r = await fetch(location.href.split('#')[0]); if (r.ok) htmlText = await r.text(); } catch (err) {}
+            if (htmlText) await buildProjectZip(htmlText);
+            else { alert('El navegador no deja leer este archivo desde tu disco. En el siguiente paso selecciona este mismo archivo HTML para incluirlo en el zip.'); document.getElementById('html-picker')?.click(); }
+        };
         const [aethel, setAethel] = useState(null);
         const [batteryList, setBatteryList] = useState(null);
         const fetchAethel = async () => {
@@ -485,9 +497,9 @@ curl -X POST ${url}/api/devices/telemetry \\
             const g = (id) => document.getElementById(id).textContent;
             const z = new JSZip();
             z.file('server.js', g('backend-src')); z.file('package.json', g('pkg-src')); z.file('vercel.json', g('vercel-src'));
-            z.file('.gitignore', g('gitignore-src')); z.file('device-bridge.js', g('bridge-src')); z.file('bridge-config.example.json', g('bridgecfg-src'));
+            z.file('.gitignore', g('gitignore-src')); z.file('device-bridge.js', g('bridge-src')); z.file('bridge-config.example.json', g('bridgecfg-src')); z.file('.github/workflows/ping.yml', g('ping-src'));
             z.file('public/index.html', htmlText);
-            z.file('LEEME.txt', 'AETHELGARD - proyecto completo\n\n1) Sube esta carpeta a GitHub e importala en Vercel.\n2) En Vercel: Storage > Upstash Redis (agrega solo las variables UPSTASH_*).\n3) Deploy. El dashboard (public/index.html) y el backend quedan en la misma URL y se conectan solos.\n\nLa wallet de cobro (Solflare) ya viene por defecto en server.js. Cambiala con SOLANA_PAYOUT_ADDRESS si algun dia usas otra.\nNo subas claves privadas al repositorio.\n');
+            z.file('LEEME.txt', 'AETHELGARD - proyecto completo\n\n1) Sube TODA esta carpeta a un repositorio nuevo de GitHub (incluida la carpeta oculta .github).\n2) En vercel.com: Add New > Project > importa ese repositorio. Antes de Deploy agrega las variables CRON_SECRET (una clave larga inventada por ti) y ADMIN_KEY (otra clave tuya).\n3) En el proyecto de Vercel: Storage > Upstash Redis > conectalo (pone solo las variables UPSTASH_*). Luego Deploy / Redeploy.\n4) Para que AETHEL trabaje solo: en GitHub > Settings > Secrets and variables > Actions agrega la VARIABLE APP_URL (https://tu-proyecto.vercel.app) y el SECRET CRON_SECRET (igual que en Vercel). El archivo .github/workflows/ping.yml lo despierta cada 5 minutos.\n5) Abre https://tu-proyecto.vercel.app : el panel y el backend viven en la misma URL. Comparte https://tu-proyecto.vercel.app/mcp con las IAs.\n\nLa wallet de cobro (Solflare) ya viene en server.js; cambiala con SOLANA_PAYOUT_ADDRESS si algun dia usas otra.\nNo subas claves privadas al repositorio.\n');
             const blob = await z.generateAsync({ type: 'blob' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'aethelgard-proyecto.zip'; a.click();
         };
@@ -722,8 +734,8 @@ curl -X POST ${url}/api/devices/telemetry \\
         // --- Refresca dispositivos y ofertas reales de energía cuando hay backend ---
         useEffect(() => {
             if (booting || !backendUrl) return;
-            fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel();
-            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel(); }, 20000);
+            fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel(); checkServer();
+            const iv = setInterval(() => { fetchDevices(); fetchDeviceOffers(); fetchAgents(); fetchFeed(); fetchRevenue(); fetchAethel(); checkServer(); }, 20000);
             return () => clearInterval(iv);
         }, [booting, backendUrl]);
 
@@ -956,6 +968,22 @@ curl -X POST ${url}/api/devices/telemetry \\
 
                     {/* MAIN WORKSPACE */}
                     <main className="flex-grow glass-rack rounded overflow-hidden flex flex-col relative">
+                        {isLocalCopy ? (
+                            <div className="bg-crisis/10 border-b border-crisis/40 p-3 text-[10px] text-white/80 flex flex-wrap items-center gap-3">
+                                <b className="text-crisis uppercase">Copia local — las IAs aún no pueden conectarse.</b>
+                                <span>Un archivo en tu computador no recibe visitas de internet. Para ponerlo en línea: descarga el proyecto, súbelo a GitHub, impórtalo en Vercel y activa Upstash Redis (3 clics).</span>
+                                <button onClick={downloadProject} className="bg-white text-black font-black text-[9px] px-3 py-1 uppercase">Descargar proyecto (.zip)</button>
+                            </div>
+                        ) : serverStatus && !serverStatus.error ? (
+                            <div className={`border-b p-2 text-[10px] flex flex-wrap gap-4 ${serverStatus.listoParaIAs ? 'bg-glw/10 border-glw/30 text-glw' : 'bg-aeth/10 border-aeth/30 text-aeth'}`}>
+                                <b className="uppercase">{serverStatus.listoParaIAs ? 'En línea: las IAs ya pueden conectarse' : 'Servidor activo, falta configurar'}</b>
+                                <span>Base de datos: {serverStatus.baseDatos}</span>
+                                <span>Cobro: {serverStatus.wallet ? serverStatus.wallet.slice(0, 6) + '…' + serverStatus.wallet.slice(-4) : 'sin wallet'}</span>
+                                <span>AETHEL: {serverStatus.aethel?.acreditacionAdmin}</span>
+                            </div>
+                        ) : serverStatus?.error ? (
+                            <div className="bg-crisis/10 border-b border-crisis/40 p-2 text-[10px] text-crisis">No se pudo contactar el servidor ({serverStatus.error}).</div>
+                        ) : null}
                         
                         {/* TAB 1: DePIN MICROGRID OS & ML PREDICTOR */}
                         {tab === 'depin' && (
@@ -1900,6 +1928,19 @@ curl -X POST ${url}/api/devices/telemetry \\
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3342,7 +3383,17 @@ app.get("/api/revenue/summary", async (req, res) => {
     const sum = (a) => +a.reduce((t, r) => t + (r.usd || 0), 0).toFixed(4);
     res.json({ wallet: SOLANA_PAYOUT, pagosVerificados: rev.length, totalUsd: sum(rev), totalSol: +(rev.reduce((t, r) => t + r.lamports, 0) / LAMPORTS_PER_SOL).toFixed(6), ultimos30dUsd: sum(d30), ultimos30dPagos: d30.length, ultimos: rev.slice(-10).reverse().map((r) => ({ at: r.at, usd: r.usd, tx: r.tx })) });
 });
-app.get("/api/status", (req, res) => res.json({ status: "AETHELGARD backend activo", mcp: "/mcp", openapi: "/openapi.json", llms: "/llms.txt", cobro: SOLANA_PAYOUT ? "SOL real, verificado on-chain" : "sin SOLANA_PAYOUT_ADDRESS configurado (modo pruebas, endpoints abiertos)" }));
+app.get("/api/status", async (req, res) => {
+    let redisOk = false;
+    try { await redis.set("aeth:ping", Date.now()); redisOk = !!(await redis.get("aeth:ping")); } catch {}
+    res.json({
+        status: "AETHELGARD backend activo", mcp: "/mcp", openapi: "/openapi.json", llms: "/llms.txt",
+        cobro: SOLANA_PAYOUT ? "SOL real, verificado on-chain" : "sin SOLANA_PAYOUT_ADDRESS configurado (modo pruebas, endpoints abiertos)",
+        wallet: SOLANA_PAYOUT || null, baseDatos: redisOk ? "ok" : "NO conectada (activa Upstash Redis en Vercel)",
+        aethel: { activo: !!SOLANA_PAYOUT && redisOk, acreditacionAdmin: process.env.ADMIN_KEY ? "configurada" : "falta ADMIN_KEY (AETHEL no podrá recibir energía)" },
+        listoParaIAs: !!SOLANA_PAYOUT && redisOk,
+    });
+});
 
 // ---------------------------------------------------------------------
 // 7) HUELLA IA — la energía de las propias máquinas como producto
@@ -3597,10 +3648,11 @@ setInterval(tick, interval);
 </script>
 
 <script type="text/plain" id="vercel-src">{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/cron/broadcast-load-signal",
-      "schedule": "*/5 * * * *"
+      "path": "/api/cron/aethel",
+      "schedule": "0 12 * * *"
     }
   ]
 }
